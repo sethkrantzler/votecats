@@ -1,5 +1,4 @@
 import * as THREE from 'three'
-import { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js'
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js'
 import GUI from 'lil-gui'
@@ -7,10 +6,12 @@ import gsap from 'gsap'
 import { ModelState } from './constants'
 import { db } from './firebaseConfig';
 import { collection, addDoc } from 'firebase/firestore';
+import { OrbitControls } from 'three/examples/jsm/Addons.js'
+import { GlitterMaterial } from './glitter.js'
 
 //#region Variables
 const gui = new GUI()
-gui.hide()
+//gui.hide()
 const paperScale = 2.5
 const thumbtackScale = 1 / 6
 const posterOffset = 1.15
@@ -23,6 +24,7 @@ let charmanderPaperModel = undefined
 let squirtlePaperModel = undefined
 let thumbtackRed = undefined
 let thumbtackBlue = undefined
+let helperText = undefined
 let voteBox = undefined
 //#endregion
 
@@ -68,7 +70,6 @@ wallColorTexture.colorSpace = THREE.SRGBColorSpace
 // Box
 const boxColorTexture = textureLoader.load('./textures/box/green_metal_rust_diff_1k.jpg')
 const boxARMTexture = textureLoader.load('./textures/box/green_metal_rust_arm_1k.jpg')
-const boxNormalTexture = textureLoader.load('./textures/box/green_metal_rust_nor_gl_1k.jpg')
 const boxDisplacementTexture = textureLoader.load('./textures/box/green_metal_rust_nor_gl_1k.jpg')
 boxColorTexture.colorSpace = THREE.SRGBColorSpace
 
@@ -86,7 +87,7 @@ const charmanderPosterMetalTexture = textureLoader.load('./textures/posters/Char
 //#region Materials
 const charmanderPaperMaterial = new THREE.MeshStandardMaterial({
     // alphaMap: posterAlphaTexture,
-    // transparent: true,
+    transparent: true,
     map: charmanderPosterColorTexture,
     metalnessMap: charmanderPosterMetalTexture,
     metalness: 0.6,
@@ -97,9 +98,9 @@ const squirtlePaperMaterial = new THREE.MeshBasicMaterial({color: '#019', transp
 //#endregion
 
 //#region Models
-// Wall
-
+// Voting Booth
 function generateVotingBooth() {
+    // Wall
     const wall = new THREE.Mesh(
         new THREE.PlaneGeometry(30, 30, 100, 100),
         new THREE.MeshStandardMaterial({
@@ -107,6 +108,62 @@ function generateVotingBooth() {
         })
     )
     scene.add(wall)
+
+    // Helper Text
+
+    fontLoader.load(
+        '/fonts/helvetiker_bold.typeface.json',
+        (font) =>
+        {
+            const customUniforms = {
+                uGlitterSize: { value: 20 },
+                uGlitterDensity: { value: 1.2}
+              }
+              
+              const textMaterial = new GlitterMaterial(customUniforms, {
+                color: '#643b9f'
+              })
+            helperText = new THREE.Group()
+            scene.add(helperText)
+            const helperTextString1 = 'PICK YOUR'
+            const helperTextString2 = 'PRESIDENT'
+            helperTextString1.split('').forEach((char, idx) => {
+                const textGeometry = new TextGeometry(
+                    char,
+                    {
+                        font: font,
+                        size: 0.5,
+                        depth: 0.02,
+                        curveSegments: 8,
+                    }
+                )
+                const text = new THREE.Mesh(textGeometry, textMaterial)
+                text.position.x = helperTextString1[idx-1]=== "I" ? (idx * 0.42) : (idx * 0.5) // space text
+                text.rotation.z = (Math.random() - 0.5) * Math.PI / 16
+                helperText.add(text)
+            })
+            helperTextString2.split('').forEach((char, idx) => {
+                const textGeometry = new TextGeometry(
+                    char,
+                    {
+                        font: font,
+                        size: 0.5,
+                        depth: 0.02,
+                        curveSegments: 12,
+                    }
+                )
+                const text = new THREE.Mesh(textGeometry, textMaterial)
+                text.position.x = helperTextString2[idx-1]=== "I" ? (idx * 0.49) : (idx * 0.51) // space text
+                text.position.y = -1.25
+                text.rotation.z = (Math.random() - 0.5) * Math.PI / 16
+                helperText.add(text)
+            })
+            helperText.position.y = 3.5
+            helperText.position.x = -2.25
+
+            
+        }
+    )
     
     // Box
     voteBox = new THREE.Group()
@@ -130,6 +187,30 @@ function generateVotingBooth() {
         })
     )
     voteBox.add(slit, box)
+    fontLoader.load(
+        '/fonts/optimer_bold.typeface.json',
+        (font) =>
+        {
+            const textMaterial = new THREE.MeshStandardMaterial({
+                color: '#fff',
+                metalness: 0.5,
+                roughness: 0
+            })
+            const textGeometry = new TextGeometry(
+                'VOTE',
+                {
+                    font: font,
+                    size: 0.5,
+                    depth: 0.02,
+                    curveSegments: 8,
+                }
+            )
+            const text = new THREE.Mesh(textGeometry, textMaterial)
+            text.position.z = 0.501
+            text.position.x = -0.83
+            voteBox.add(text)
+        }
+    )
     
     // Shelf
     const shelf = new THREE.Mesh(
@@ -159,10 +240,8 @@ function generateVotingBooth() {
     
     function generateThumbtack(color) {
         const thumbtack = new THREE.Group()
-        const tipMaterial = new THREE.MeshStandardMaterial({ 
-            color: 0x808080,
-            metalness: 0.7,
-            roughness: 0.3
+        const tipMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0x808080
         });
         const coneGeometry = new THREE.ConeGeometry(0.1*thumbtackScale, 0.2*thumbtackScale, 16);
         const cone = new THREE.Mesh(coneGeometry, tipMaterial);
@@ -177,8 +256,8 @@ function generateVotingBooth() {
     
         const headMaterial = new THREE.MeshStandardMaterial({ 
             color: color,
-            metalness: 0.3,
-            roughness: 0.5
+            metalness: 0.4,
+            roughness: 0.3
         }); // Grey color
         const headCylinder1 = new THREE.Mesh(new THREE.CylinderGeometry(0.2*thumbtackScale, 0.5*thumbtackScale, 0.1*thumbtackScale, 16), headMaterial);
         headCylinder1.position.y = 0;
@@ -202,9 +281,9 @@ function generateVotingBooth() {
 
     // Positioning
     thumbtackBlue.rotation.set(Math.PI / 2, Math.random() * -0.6, Math.random()*-0.3)
-    thumbtackBlue.position.set(0 + posterOffset, 1.15*paperScale*0.5 - 0.18, 0.1)
+    thumbtackBlue.position.set(posterOffset, 1.15*paperScale*0.5 - 0.09, 0.1)
     thumbtackRed.rotation.set(Math.PI / 2, Math.random() * 0.6, Math.random()*0.3)
-    thumbtackRed.position.set(0 - posterOffset, 1.15*paperScale*0.5 - 0.2, 0.1)
+    thumbtackRed.position.set(-posterOffset, 1.15*paperScale*0.5 - 0.1, 0.1)
     charmanderPaperModel.position.x = 0 - posterOffset
     squirtlePaperModel.position.x = 0 + posterOffset
     charmanderPaperModel.position.z = 0.025
@@ -304,17 +383,19 @@ window.addEventListener('resize', () =>
 //#region Camera
 const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 15)
 camera.position.z = 7
-gui.add(camera.position, 'z').min(1).max(8).step(1)
 scene.add(camera)
 
 //#region Controls
-const controls = new TrackballControls(camera, canvas)
+const controls = new OrbitControls(camera, canvas)
 controls.enableDamping = true
-controls.dynamicDampingFactor = 0.15
-// controls.noPan = true
-// controls.noRoll = true
-// controls.noRotate = true
-controls.maxDistance = 8
+// controls.dynamicDampingFactor = 0.35
+// controls.maxAzimuthAngle =  Math.PI / 64
+// controls.minAzimuthAngle = -Math.PI / 64
+// controls.minPolarAngle = Math.PI/2 + -Math.PI / 64
+// controls.maxPolarAngle = Math.PI/2 + Math.PI / 64
+// controls.maxDistance = 7
+// controls.minDistance = 6.5
+controls.enablePan = false
 
 //#region Renderer
 const renderer = new THREE.WebGLRenderer({
@@ -374,8 +455,13 @@ function hasVoted(vote) {
 }
 
 function showHelpers() {
-
+    helperText.children.forEach((letter, index) => {
+        setTimeout(() => {
+            shakeLetter(letter);
+        }, index * 50);
+    });
 }
+
 
 function showVotedState(vote, shouldAnimate = true) {
     didVote = true;
@@ -439,7 +525,7 @@ function animatePosterIn(mesh) {
 }
 
 function animateThumbtackOut(mesh) {
-    lastThumbtackCoordinates = new THREE.Vector3(mesh.position.x, mesh.position.y, mesh.position.z)
+    lastThumbtackCoordinates = new THREE.Vector3(mesh === thumbtackRed ? -posterOffset : posterOffset, 1.15*paperScale*0.5 - 0.09, 0.1)
     gsap.to(mesh.rotation, { duration: 0.2, x:  Math.PI / 4})
     gsap.to(mesh.rotation, { delay: 0.1, duration: 0.2, x:  Math.PI / 2})
     gsap.to(mesh.position, { duration: 0.3, y: mesh.position.y + 0.5, z: mesh.position.z + 0.3, ease: 'power1.out'})
@@ -481,6 +567,41 @@ function animatePinIn(mesh, animateY) {
     tl.to(mesh.rotation, { duration: 4, y: Math.PI / 12, ease: 'power2.inOut' })
     .to(mesh.rotation, { duration: 4, y: -Math.PI / 12, ease: 'power2.inOut' })
 }
+
+function shakeLetter(mesh) {
+    // Create a GSAP timeline
+    let tl = gsap.timeline({yoyo: true});
+
+
+    // Add scaling animation
+    tl.to(mesh.scale, {
+        x: 1.1,
+        y: 1.1,
+        z: 1.1,
+        duration: 0.2,
+        ease: "power1.inOut"
+    });
+
+    // Add wiggle rotation animation
+    tl.to(mesh.rotation, {
+        z: "+=0.1",
+        duration: 0.1,
+        ease: "power1.inOut",
+        yoyo: true,
+        repeat: 3
+    });
+
+    // Return to original scale and rotation
+    tl.to(mesh.scale, {
+        x: 1,
+        y: 1,
+        z: 1,
+        duration: 0.2,
+        ease: "power1.inOut"
+    });
+    return tl;
+}
+
 
 
 function resetControls() {
@@ -533,7 +654,7 @@ function getCookieByName(name) {
 
 
 //#region Startup
-//window.addEventListener('dblclick', () => resetControls())
+window.addEventListener('dblclick', () => resetControls())
 window.addEventListener('click', onMouseClick, false);
 if (getCookieByName('vote')) {
     showVotedState(getCookieByName('vote'), false)
