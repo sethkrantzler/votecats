@@ -11,7 +11,7 @@ import { GlitterMaterial } from './glitter.js'
 
 //#region Variables
 const gui = new GUI()
-//gui.hide()
+gui.hide()
 const paperScale = 2.5
 const thumbtackScale = 1 / 6
 const posterOffset = 1.15
@@ -388,13 +388,13 @@ scene.add(camera)
 //#region Controls
 const controls = new OrbitControls(camera, canvas)
 controls.enableDamping = true
-// controls.dynamicDampingFactor = 0.35
-// controls.maxAzimuthAngle =  Math.PI / 64
-// controls.minAzimuthAngle = -Math.PI / 64
-// controls.minPolarAngle = Math.PI/2 + -Math.PI / 64
-// controls.maxPolarAngle = Math.PI/2 + Math.PI / 64
-// controls.maxDistance = 7
-// controls.minDistance = 6.5
+controls.dynamicDampingFactor = 0.35
+controls.maxAzimuthAngle =  Math.PI / 128
+controls.minAzimuthAngle = -Math.PI / 128
+controls.minPolarAngle = Math.PI/2 + -Math.PI / 64
+controls.maxPolarAngle = Math.PI/2 + Math.PI / 64
+controls.maxDistance = 7
+controls.minDistance = 6.5
 controls.enablePan = false
 
 //#region Renderer
