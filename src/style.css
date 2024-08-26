@@ -1,0 +1,122 @@
+@font-face {
+    font-family: 'Gotham';
+    src: url('./fonts/GothamBold.ttf') format('truetype');
+}
+
+*
+{
+    margin: 0;
+    padding: 0;
+}
+
+html,
+body
+{
+    overflow: hidden;
+    font-family: 'Gotham';
+}
+
+.webgl
+{
+    position: fixed;
+    top: 0;
+    left: 0;
+    outline: none;
+}
+
+.hud-container-top
+{
+    opacity: 0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    font-size: 32px;
+    padding: 32px 0;
+    user-select: none;
+    text-align: center;
+    pointer-events: none;
+
+    .thanks 
+    {
+        font-size: 48px;
+    }
+
+    .results {
+        padding-top: 32px;
+    }
+
+    .reminders {
+        display: flex;
+        align-content: center;
+        justify-content: center;
+        align-items: center;
+        gap: 12px;
+        padding-top: 8px;
+        font-size: 16px;
+    }
+}
+
+.hud-container-bottom
+{
+    opacity: 0;
+    position: fixed;
+    bottom: 128px;
+    left: 0;
+    width: 100%;
+    font-size: 32px;
+    padding: 32px 0;
+    user-select: none;
+    text-align: center;
+    pointer-events: none;
+}
+
+.animate-down {
+    animation: moveDown 2s ease-in-out forwards;
+}
+
+@keyframes moveDown {
+    from {
+        top: -100px; /* Start position */
+        opacity: 0;
+    }
+    to {
+        top: 0; /* End position */
+        opacity: 1;
+        pointer-events: all;
+    }
+}
+
+.animate-up {
+    animation: moveUp 2s ease-in-out forwards;
+    animation-delay: 1s;
+}
+
+@keyframes moveUp {
+    from {
+        bottom: -128px; /* Start position */
+        opacity: 0;
+
+    }
+    to {
+        bottom: 0; /* End position */
+        opacity: 1;
+        pointer-events: all;
+    }
+}
+
+.red{
+    color: red;
+}
+
+.blue {
+    color: blue;
+}
+
+a:link {
+    color: #286128;
+}
+
+a:visited {
+    color: #286128; /* This ensures the visited link retains the default color */
+}

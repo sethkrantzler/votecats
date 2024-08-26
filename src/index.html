@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kitty City Election Committee</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <canvas class="webgl"></canvas>
+    <script type="module" src="./firebaseConfig.js"></script>
+    <script type="module" src="./script.js"></script>
+    <script type="module" src="./buttons.js"></script>
+    <div id="hud-top" class="hud-container-top">
+        <div class="thanks">
+            <div>THANK YOU</div>
+            <div>FOR <span id="voting">VOTING</span></div>
+        </div>
+        <div class="results">
+            <div>RESULTS</div>
+            <div>11/5/24 8PM EST</div>
+            <div class="reminders">
+                <div>REMINDER</div>
+                <a href="data:text/calendar;charset=utf8,BEGIN:VCALENDAR%0D%0AVERSION:2.0%0D%0ABEGIN:VEVENT%0D%0AUID:1724360763229@example.com%0D%0ADTSTAMP:20241105T200000Z%0D%0ADTSTART;TZID=America/New_York:20241105T200000%0D%0ADTEND;TZID=America/New_York:20241105T210000%0D%0ASUMMARY:Kitty%20City%20Presidential%20Election%20Results%0D%0ADESCRIPTION:Come%20see%20who%20won%20the%20Kitty%20City%202024%20presidential%20race!%0D%0ALOCATION:https%3A%2F%2Fkittycity.vote%0D%0AEND:VEVENT%0D%0AEND:VCALENDAR" target="_blank">APPLE</a>
+                <a href="https://www.google.com/calendar/render?action=TEMPLATE&text=Kitty%20City%20Presidential%20Election%20Results&dates=20241105T200000/20241105T210000&details=Come%20see%20who%20won%20the%20Kitty%20City%202024%20presidential%20race!&location=https%3A%2F%2Fkittycity.vote&sf=true&output=xml" target="_blank">GOOGLE</a>
+            </div>
+        </div>
+    </div>
+    <div id="hud-bottom" class="hud-container-bottom">
+        <div class="donate">
+            <div>SAVE CATS LIKE <span class="red">CHARMANDER</span> & <span class="blue">SQUIRTLE</span></div>
+            <a href="https://www.gulfcoaststars.com/support" target="_blank">DONATE TO GULF COAST STARS</a>
+        </div>
+    </div>
+</body>
+</html>
