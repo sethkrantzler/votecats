@@ -4,7 +4,6 @@ import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js'
 import GUI from 'lil-gui'
 import gsap from 'gsap'
-import axios from 'axios'
 import { ModelState } from './constants'
 import { db } from './firebaseConfig';
 import { collection, addDoc } from 'firebase/firestore';
@@ -48,25 +47,22 @@ const fontLoader = new FontLoader()
 
 //#region Lights
 // Ambient light
-const ambientLight = new THREE.AmbientLight('#fff', 0.275)
+const ambientLight = new THREE.AmbientLight('#fff', 3.5)
 scene.add(ambientLight)
 
 // Directional light
-const directionalLight = new THREE.DirectionalLight('#fff', 5)
-directionalLight.position.set(3, 2, 8)
+const directionalLight = new THREE.DirectionalLight('#fff', 0.5)
+directionalLight.position.set(0, 4, 9.5)
 scene.add(directionalLight)
+
 
 //#endregion
 
 //#region Textures
 const textureLoader = new THREE.TextureLoader()
-// Posters
-const matcapTexture = textureLoader.load('/textures/3.png')
+
 // Wall
 const wallColorTexture = textureLoader.load('./textures/wall/painted_plaster_wall_diff_1k.jpg')
-const wallARMTexture = textureLoader.load('./textures/wall/painted_plaster_wall_arm_1k.jpg')
-const wallNormalTexture = textureLoader.load('./textures/wall/painted_plaster_wall_nor_gl_1k.jpg')
-const wallDisplacementTexture = textureLoader.load('./textures/wall/painted_plaster_wall_nor_gl_1k.jpg')
 wallColorTexture.colorSpace = THREE.SRGBColorSpace
 
 // Box
@@ -81,8 +77,21 @@ const shelfColorTexture = textureLoader.load('./textures/shelf/wood_peeling_pain
 const shelfARMTexture = textureLoader.load('./textures/shelf/wood_peeling_paint_weathered_arm_1k.jpg')
 const shelfNormalTexture = textureLoader.load('./textures/shelf/wood_peeling_paint_weathered_nor_gl_1k.jpg')
 
+// Posters
+const posterAlphaTexture = textureLoader.load('./textures/posters/PosterAlpha.jpg')
+const charmanderPosterColorTexture = textureLoader.load('./textures/posters/CharmanderPosterColor.jpg')
+const charmanderPosterMetalTexture = textureLoader.load('./textures/posters/CharmanderPosterMetal.jpg')
+
+
 //#region Materials
-const charmanderPaperMaterial = new THREE.MeshBasicMaterial({color: '#fcc', transparent: true})
+const charmanderPaperMaterial = new THREE.MeshStandardMaterial({
+    // alphaMap: posterAlphaTexture,
+    // transparent: true,
+    map: charmanderPosterColorTexture,
+    metalnessMap: charmanderPosterMetalTexture,
+    metalness: 0.6,
+    roughness: 0.35
+})
 const squirtlePaperMaterial = new THREE.MeshBasicMaterial({color: '#019', transparent: true})
 
 //#endregion
@@ -94,15 +103,7 @@ function generateVotingBooth() {
     const wall = new THREE.Mesh(
         new THREE.PlaneGeometry(30, 30, 100, 100),
         new THREE.MeshStandardMaterial({
-            color: '#fff',
             map: wallColorTexture,
-            aoMap: wallARMTexture,
-            roughnessMap: wallARMTexture,
-            metalnessMap: wallARMTexture,
-            normalMap: wallNormalTexture,
-            displacementMap: wallDisplacementTexture,
-            displacementScale: 0.3,
-            displacementBias: -0.2
         })
     )
     scene.add(wall)
@@ -123,9 +124,6 @@ function generateVotingBooth() {
         new THREE.MeshStandardMaterial({
             map: boxColorTexture,
             aoMap: boxARMTexture,
-            roughnessMap: boxARMTexture,
-            metalnessMap: boxARMTexture,
-            normalMap: boxNormalTexture,
             displacementMap: boxDisplacementTexture,
             displacementScale: 0.3,
             displacementBias: -0.15
@@ -148,12 +146,12 @@ function generateVotingBooth() {
     
     // Posters
     charmanderPaperModel = new THREE.Mesh(
-        new THREE.BoxGeometry(0.8*paperScale, 1.15*paperScale, 0.1),
+        new THREE.PlaneGeometry(0.8*paperScale, 1.15*paperScale, 12, 12),
         charmanderPaperMaterial
     )
     
     squirtlePaperModel = new THREE.Mesh(
-        new THREE.BoxGeometry(0.8*paperScale, 1.15*paperScale, 0.1),
+        new THREE.PlaneGeometry(0.8*paperScale, 1.15*paperScale, 12,12),
         squirtlePaperMaterial
     )
     scene.add(squirtlePaperModel)
@@ -209,6 +207,8 @@ function generateVotingBooth() {
     thumbtackRed.position.set(0 - posterOffset, 1.15*paperScale*0.5 - 0.2, 0.1)
     charmanderPaperModel.position.x = 0 - posterOffset
     squirtlePaperModel.position.x = 0 + posterOffset
+    charmanderPaperModel.position.z = 0.025
+    squirtlePaperModel.position.z = 0.025
     voteBox.position.y = -2.75
     voteBox.position.z = 1
     shelf.position.y = -3.75
@@ -308,13 +308,13 @@ gui.add(camera.position, 'z').min(1).max(8).step(1)
 scene.add(camera)
 
 //#region Controls
-// const controls = new TrackballControls(camera, canvas)
-// controls.enableDamping = true
-// controls.dynamicDampingFactor = 0.15
+const controls = new TrackballControls(camera, canvas)
+controls.enableDamping = true
+controls.dynamicDampingFactor = 0.15
 // controls.noPan = true
 // controls.noRoll = true
 // controls.noRotate = true
-// controls.maxDistance = 8
+controls.maxDistance = 8
 
 //#region Renderer
 const renderer = new THREE.WebGLRenderer({
@@ -332,7 +332,7 @@ const tick = () =>
     const elapsedTime = clock.getElapsedTime()
 
     // Update controls
-    // controls.update()
+    controls.update()
 
     // Render
     renderer.render(scene, camera)
@@ -429,12 +429,12 @@ function onMouseClick(event) {
 //#region GSAP
 
 function animatePosterOut(mesh){
-    lastPosterCoordinates = new THREE.Vector3(mesh.position.x, mesh.position.y, mesh.position.z)
+    lastPosterCoordinates = new THREE.Vector3(mesh === charmanderPaperModel ? -posterOffset : posterOffset, 0, 0.025)
     gsap.to(mesh.position, { delay: 0.3, duration: debugObject.easeDuration, x: 0, y: debugObject.posterSelectionHeight, z: debugObject.posterSelectionZ, ease: debugObject.resetEase})
 }
 
 function animatePosterIn(mesh) {
-    gsap.to(mesh.position, { duration: debugObject.easeDuration, x: lastPosterCoordinates.x, y: lastPosterCoordinates.y, z: lastPosterCoordinates.z, ease: debugObject.resetEase})
+    gsap.to(mesh.position, { duration: debugObject.easeDuration+0.2, x: lastPosterCoordinates.x, y: lastPosterCoordinates.y, z: lastPosterCoordinates.z, ease: debugObject.resetEase})
     lastPosterCoordinates = undefined
 }
 
