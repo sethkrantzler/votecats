@@ -126,7 +126,7 @@ function generateVotingBooth() {
     // Helper Text
 
     fontLoader.load(
-        '/fonts/helvetiker_bold.typeface.json',
+        './fonts/helvetiker_bold.typeface.json',
         (font) =>
         {
             const customUniforms = {
@@ -134,9 +134,9 @@ function generateVotingBooth() {
                 uGlitterDensity: { value: 1.2}
               }
               
-              const textMaterial = new GlitterMaterial(customUniforms, {
+            const textMaterial = new GlitterMaterial(customUniforms, {
                 color: '#643b9f', // bronze #9c7e41
-              })
+            })
             helperText = new THREE.Group()
             scene.add(helperText)
             const helperTextString1 = 'PICK YOUR'
@@ -206,7 +206,7 @@ function generateVotingBooth() {
     )
     voteBox.add(slit, box)
     fontLoader.load(
-        '/fonts/optimer_bold.typeface.json',
+        './fonts/optimer_bold.typeface.json',
         (font) =>
         {
             const textMaterial = new THREE.MeshStandardMaterial({
