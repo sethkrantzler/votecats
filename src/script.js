@@ -406,8 +406,6 @@ scene.add(camera)
 
 //#region Controls
 const controls = new OrbitControls(camera, canvas)
-controls.enableDamping = true
-controls.dynamicDampingFactor = 0.35
 controls.maxAzimuthAngle =  Math.PI / 8
 controls.minAzimuthAngle = -Math.PI / 8
 controls.minPolarAngle = Math.PI/2 + -Math.PI / 8
@@ -535,7 +533,7 @@ function onMouseClick(event) {
 
 function animatePosterOut(mesh){
     lastPosterCoordinates = new THREE.Vector3(mesh === charmanderPaperModel ? -posterOffset : posterOffset, 0, 0.025)
-    gsap.to(mesh.position, { delay: 0.3, duration: debugObject.easeDuration, x: 0, y: debugObject.posterSelectionHeight, z: debugObject.posterSelectionZ, ease: debugObject.resetEase})
+    gsap.to(mesh.position, { delay: 0.2, duration: debugObject.easeDuration, x: 0, y: debugObject.posterSelectionHeight, z: debugObject.posterSelectionZ, ease: debugObject.resetEase})
 }
 
 function animatePosterIn(mesh) {
