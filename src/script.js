@@ -643,8 +643,8 @@ function resetControls() {
 
 //#region Debug
 const debugObject = {}
-debugObject.resetEase = "power1.out"
-debugObject.easeDuration = 0.25
+debugObject.resetEase = "elastic.out(1,2)"
+debugObject.easeDuration = 0.3
 debugObject.spawnDistance = 16
 debugObject.posterSelectionHeight = 0.75
 debugObject.posterSelectionZ = 4
