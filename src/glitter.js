@@ -57,7 +57,7 @@ export class GlitterMaterial extends THREE.MeshPhongMaterial {
          vec3 specLight = vec3(0.0,0.0,0.0);
       
           vec3 pointLightPosition = vec3(vPosition) + vec3(.0,.0,1.0);
-          vec3 pointLightColor = vec3(1.0, 1.0, 1.0);
+          vec3 pointLightColor = vec3(0,0,0);
           vec3 lightDirection = normalize(vPosition - pointLightPosition);
                   
           specLight.rgb += clamp(dot(-lightDirection, vnormal), 0., .9) * pointLightColor;

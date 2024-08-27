@@ -6,7 +6,7 @@ import gsap from 'gsap'
 import { ModelState } from './constants'
 import { db } from './firebaseConfig';
 import { collection, addDoc } from 'firebase/firestore';
-import { OrbitControls } from 'three/examples/jsm/Addons.js'
+import { OrbitControls, RectAreaLightUniformsLib, RectAreaLightHelper } from 'three/examples/jsm/Addons.js'
 import { GlitterMaterial } from './glitter.js'
 
 //#region Variables
@@ -52,10 +52,23 @@ const fontLoader = new FontLoader()
 const ambientLight = new THREE.AmbientLight('#fff', 3.5)
 scene.add(ambientLight)
 
+// // React area light
+// RectAreaLightUniformsLib.init()
+// const rectAreaLight = new THREE.RectAreaLight('#fff', 1, 6, 12)
+// rectAreaLight.position.set(0, 0, 8)
+// rectAreaLight.lookAt(new THREE.Vector3())
+// scene.add(rectAreaLight)
+// const helper = new RectAreaLightHelper( rectAreaLight );
+// rectAreaLight.add( helper ); // helper must be added as a child of the light
+
 // Directional light
 const directionalLight = new THREE.DirectionalLight('#fff', 0.5)
 directionalLight.position.set(0, 4, 9.5)
 scene.add(directionalLight)
+
+const directionalLight2 = new THREE.DirectionalLight('#fff', 0.5)
+directionalLight2.position.set(0, -4.5, 9.5)
+scene.add(directionalLight2)
 
 
 //#endregion
@@ -102,8 +115,9 @@ const squirtlePaperMaterial = new THREE.MeshBasicMaterial({color: '#019', transp
 function generateVotingBooth() {
     // Wall
     const wall = new THREE.Mesh(
-        new THREE.PlaneGeometry(30, 30, 100, 100),
+        new THREE.PlaneGeometry(12, 12, 30, 30),
         new THREE.MeshStandardMaterial({
+            color: 0xfffff0,
             map: wallColorTexture,
         })
     )
@@ -121,7 +135,7 @@ function generateVotingBooth() {
               }
               
               const textMaterial = new GlitterMaterial(customUniforms, {
-                color: '#643b9f'
+                color: '#643b9f', // bronze #9c7e41
               })
             helperText = new THREE.Group()
             scene.add(helperText)
@@ -137,8 +151,10 @@ function generateVotingBooth() {
                         curveSegments: 8,
                     }
                 )
+                textGeometry.center()
                 const text = new THREE.Mesh(textGeometry, textMaterial)
                 text.position.x = helperTextString1[idx-1]=== "I" ? (idx * 0.42) : (idx * 0.5) // space text
+                text.position.x += 0.25
                 text.rotation.z = (Math.random() - 0.5) * Math.PI / 16
                 helperText.add(text)
             })
@@ -152,8 +168,10 @@ function generateVotingBooth() {
                         curveSegments: 12,
                     }
                 )
+                textGeometry.center()
                 const text = new THREE.Mesh(textGeometry, textMaterial)
                 text.position.x = helperTextString2[idx-1]=== "I" ? (idx * 0.49) : (idx * 0.51) // space text
+                text.position.x += 0.25
                 text.position.y = -1.25
                 text.rotation.z = (Math.random() - 0.5) * Math.PI / 16
                 helperText.add(text)
@@ -192,9 +210,10 @@ function generateVotingBooth() {
         (font) =>
         {
             const textMaterial = new THREE.MeshStandardMaterial({
-                color: '#fff',
-                metalness: 0.5,
-                roughness: 0
+                color: '#B87333',
+                metalness: 1,
+                roughness: 0.25
+
             })
             const textGeometry = new TextGeometry(
                 'VOTE',
@@ -205,9 +224,9 @@ function generateVotingBooth() {
                     curveSegments: 8,
                 }
             )
+            textGeometry.center()
             const text = new THREE.Mesh(textGeometry, textMaterial)
             text.position.z = 0.501
-            text.position.x = -0.83
             voteBox.add(text)
         }
     )
@@ -389,10 +408,10 @@ scene.add(camera)
 const controls = new OrbitControls(camera, canvas)
 controls.enableDamping = true
 controls.dynamicDampingFactor = 0.35
-controls.maxAzimuthAngle =  Math.PI / 128
-controls.minAzimuthAngle = -Math.PI / 128
-controls.minPolarAngle = Math.PI/2 + -Math.PI / 64
-controls.maxPolarAngle = Math.PI/2 + Math.PI / 64
+controls.maxAzimuthAngle =  Math.PI / 8
+controls.minAzimuthAngle = -Math.PI / 8
+controls.minPolarAngle = Math.PI/2 + -Math.PI / 8
+controls.maxPolarAngle = Math.PI/2 + Math.PI / 8
 controls.maxDistance = 7
 controls.minDistance = 6.5
 controls.enablePan = false
@@ -605,11 +624,11 @@ function shakeLetter(mesh) {
 
 
 function resetControls() {
-    gsap.to(controls.object.up, {
+    gsap.to(controls.object.rotation, {
         duration: debugObject.easeDuration,
-        x: controls.up0.x,
-        y: controls.up0.y,
-        z: controls.up0.z,
+        x: 0,
+        y: 0,
+        z: 0,
         ease: debugObject.resetEase,
     });
     gsap.to(controls.object.position, {
@@ -654,7 +673,7 @@ function getCookieByName(name) {
 
 
 //#region Startup
-window.addEventListener('dblclick', () => resetControls())
+controls.addEventListener('end', () => resetControls())
 window.addEventListener('click', onMouseClick, false);
 if (getCookieByName('vote')) {
     showVotedState(getCookieByName('vote'), false)
