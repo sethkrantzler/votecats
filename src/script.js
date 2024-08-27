@@ -103,7 +103,7 @@ const charmanderPaperMaterial = new THREE.MeshStandardMaterial({
     transparent: true,
     map: charmanderPosterColorTexture,
     metalnessMap: charmanderPosterMetalTexture,
-    metalness: 0.6,
+    metalness: 1,
     roughness: 0.35
 })
 const squirtlePaperMaterial = new THREE.MeshBasicMaterial({color: '#019', transparent: true})
