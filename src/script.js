@@ -646,18 +646,13 @@ const debugObject = {}
 debugObject.resetEase = "power1.out"
 debugObject.easeDuration = 0.25
 debugObject.spawnDistance = 16
-debugObject.fetchInterval = 6
 debugObject.posterSelectionHeight = 0.75
 debugObject.posterSelectionZ = 4
-debugObject.template = ''
 debugObject.buttonSize = 0.3
 gui.add(debugObject, 'posterSelectionHeight')
 gui.add(debugObject, 'posterSelectionZ')
 gui.add(debugObject, 'resetEase')
 gui.add(debugObject, 'easeDuration')
-gui.add(debugObject, 'template', [ ModelState.NONE, ModelState.SQUIRTLE, ModelState.CHARMANDER ]).onChange( (val) => {
-    updateState(val)
-} );
 
 //#region Cookies
 function getCookieByName(name) {
