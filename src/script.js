@@ -500,6 +500,9 @@ function hasVoted(vote) {
 
 function startVoteHelper() {
     setTimeout(() => {
+        if (voteInterval) {
+            clearInterval(voteInterval)
+        }
         voteInterval = setInterval(() => {
             shakeLetter(voteText);
         }, 5000);
