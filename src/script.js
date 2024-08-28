@@ -499,14 +499,12 @@ function hasVoted(vote) {
 }
 
 function startVoteHelper() {
-    setTimeout(() => {
-        if (voteInterval) {
-            clearInterval(voteInterval)
-        }
-        voteInterval = setInterval(() => {
-            shakeLetter(voteText);
-        }, 5000);
-    }, 3000);
+    if (voteInterval) {
+        clearInterval(voteInterval)
+    }
+    voteInterval = setInterval(() => {
+        shakeLetter(voteText, 3);
+    }, 5000);
 }
 
 function stopVoteHelper() {
@@ -635,7 +633,7 @@ function animatePinIn(mesh, animateY) {
     .to(mesh.rotation, { duration: 4, y: -Math.PI / 12, ease: 'power2.inOut' })
 }
 
-function shakeLetter(mesh) {
+function shakeLetter(mesh, delay = 0) {
     // Create a GSAP timeline
     let tl = gsap.timeline({yoyo: true});
 
@@ -646,6 +644,7 @@ function shakeLetter(mesh) {
         y: 1.1,
         z: 1.1,
         duration: 0.2,
+        delay,
         ease: "power1.inOut"
     });
 
