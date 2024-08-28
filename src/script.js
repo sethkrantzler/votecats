@@ -27,6 +27,9 @@ let thumbtackBlue = undefined
 let helperText = undefined
 let voteBox = undefined
 let touchStartX, touchStartY = undefined
+let startTime = undefined
+let voteInterval = undefined
+let voteText = undefined
 //#endregion
 
 //#region Firebase
@@ -229,6 +232,7 @@ function generateVotingBooth() {
             const text = new THREE.Mesh(textGeometry, textMaterial)
             text.position.z = 0.501
             voteBox.add(text)
+            voteText = text
         }
     )
     
@@ -407,13 +411,29 @@ scene.add(camera)
 
 //#region Controls
 const controls = new OrbitControls(camera, canvas)
-controls.maxAzimuthAngle =  Math.PI / 8
-controls.minAzimuthAngle = -Math.PI / 8
-controls.minPolarAngle = Math.PI/2 + -Math.PI / 8
-controls.maxPolarAngle = Math.PI/2 + Math.PI / 8
-controls.maxDistance = 7
-controls.minDistance = 6.5
 controls.enablePan = false
+
+function normalControls() {
+    controls.enableRotate = true
+    controls.maxAzimuthAngle =  Math.PI / 8
+    controls.minAzimuthAngle = -Math.PI / 8
+    controls.minPolarAngle = Math.PI/2 + -Math.PI / 8
+    controls.maxPolarAngle = Math.PI/2 + Math.PI / 8
+    controls.maxDistance = 7
+    controls.minDistance = 4
+}
+
+function clampedControls() {
+    controls.enableRotate = false
+    controls.maxAzimuthAngle = 0
+    controls.minAzimuthAngle = 0
+    controls.minPolarAngle = Math.PI/2
+    controls.maxPolarAngle = Math.PI/2
+    controls.maxDistance = 7
+    controls.minDistance = 6
+}
+
+normalControls()
 
 //#region Renderer
 const renderer = new THREE.WebGLRenderer({
@@ -445,12 +465,16 @@ function selectPoster(mesh) {
     const selection = stateFromModel(mesh)
     // deselect
     if (currentState == selection) {
+        normalControls()
         animateThumbtackIn(mesh === charmanderPaperModel ? thumbtackRed : thumbtackBlue)
         animatePosterIn(mesh)
         currentState = ModelState.NONE
+        stopVoteHelper()
         return
     }
     // select
+    clampedControls()
+    startVoteHelper()
     currentState = selection
     animateThumbtackOut(mesh === charmanderPaperModel ? thumbtackRed : thumbtackBlue)
     animatePosterOut(mesh)
@@ -458,11 +482,13 @@ function selectPoster(mesh) {
 
 async function castVote() {
     try {
+        stopVoteHelper()
         animateBallotIn(modelFromState());
         const docRef = await addDoc(collection(db, 'votes'), {vote: currentState})
         return docRef.id ? hasVoted(currentState) : setTimeout(() => animateBallotOut(modelFromState()), 500)
     } catch (error) {
         setTimeout(() => animateBallotOut(modelFromState()), 500)
+        startVoteHelper()
         console.error('Error casting vote:', error)
     }
 }
@@ -470,6 +496,18 @@ async function castVote() {
 function hasVoted(vote) {
     document.cookie = `vote=${vote}; path=/; max-age=31536000`; // Cookie valid for 1 year
     showVotedState(vote);
+}
+
+function startVoteHelper() {
+    setTimeout(() => {
+        voteInterval = setInterval(() => {
+            shakeLetter(voteText);
+        }, 5000);
+    }, 3000);
+}
+
+function stopVoteHelper() {
+    clearInterval(voteInterval);
 }
 
 function showHelpers() {
@@ -674,6 +712,7 @@ function getCookieByName(name) {
 }
 
 function onTouchStart(event) {
+    startTime = Date.now()
     touchStartX = event.touches[0].clientX;
     touchStartY = event.touches[0].clientY;
 }
@@ -684,14 +723,16 @@ function onTouchEnd(event) {
 
     const deltaX = touchEndX - touchStartX;
     const deltaY = touchEndY - touchStartY;
+    const time = Date.now()-startTime
     const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
-    if (distance < 10) { // Adjust the threshold as needed
+    if (time < 300 || distance < 2 || (currentState != ModelState.NONE && distance > 50)) {
         onMouseClick(event);
     }
 }
 
 function onMouseDown(event) {
+    startTime = Date.now()
     touchStartX = event.clientX;
     touchStartY = event.clientY;
 }
@@ -703,8 +744,9 @@ function onMouseUp(event) {
     const deltaX = mouseEndX - touchStartX;
     const deltaY = mouseEndY - touchStartY;
     const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    const time = Date.now()-startTime
 
-    if (distance < 10) { // Adjust the threshold as needed
+    if (time < 300 || distance < 2 || (currentState != ModelState.NONE && distance > 50)) {
         onMouseClick(event);
     }
 }
