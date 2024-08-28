@@ -6,7 +6,7 @@ import gsap from 'gsap'
 import { ModelState } from './constants'
 import { db } from './firebaseConfig';
 import { collection, addDoc } from 'firebase/firestore';
-import { OrbitControls, RectAreaLightUniformsLib, RectAreaLightHelper } from 'three/examples/jsm/Addons.js'
+import { OrbitControls} from 'three/examples/jsm/Addons.js'
 import { GlitterMaterial } from './glitter.js'
 
 //#region Variables
@@ -26,6 +26,7 @@ let thumbtackRed = undefined
 let thumbtackBlue = undefined
 let helperText = undefined
 let voteBox = undefined
+let touchStartX, touchStartY = undefined
 //#endregion
 
 //#region Firebase
@@ -126,7 +127,7 @@ function generateVotingBooth() {
     // Helper Text
 
     fontLoader.load(
-        './fonts/helvetiker_bold.typeface.json',
+        './3dfonts/helvetiker_bold.typeface.json',
         (font) =>
         {
             const customUniforms = {
@@ -206,7 +207,7 @@ function generateVotingBooth() {
     )
     voteBox.add(slit, box)
     fontLoader.load(
-        './fonts/optimer_bold.typeface.json',
+        './3dfonts/optimer_bold.typeface.json',
         (font) =>
         {
             const textMaterial = new THREE.MeshStandardMaterial({
@@ -352,7 +353,7 @@ function generateVotingPin(vote) {
     // pin.position.x = 0.2
     // button.add(pin)
 
-    button.position.y = 0
+    button.position.y = -0.1
     button.position.z = 4
     const box = new THREE.Box3().setFromObject(button);
 
@@ -481,7 +482,8 @@ function showHelpers() {
 
 
 function showVotedState(vote, shouldAnimate = true) {
-    didVote = true;
+    didVote = true
+    controls.enabled = false
     votePin = generateVotingPin(vote)
     animatePinIn(votePin, shouldAnimate)
     document.getElementById('hud-top').classList.add('animate-down')
@@ -499,9 +501,16 @@ function modelFromState() {
 
 // Function to handle mouse click events
 function onMouseClick(event) {
-    // Update the mouse variable with normalized device coordinates
-    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    // Check if the event is a touch event
+    if (event.type === 'touchend') {
+        // Use the first touch point from changedTouches
+        mouse.x = (event.changedTouches[0].clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.changedTouches[0].clientY / window.innerHeight) * 2 + 1;
+    } else {
+        // Use the mouse coordinates
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    }
 
     // Update the raycaster with the camera and mouse position
     raycaster.setFromCamera(mouse, camera);
@@ -664,10 +673,52 @@ function getCookieByName(name) {
     return null;
 }
 
+function onTouchStart(event) {
+    touchStartX = event.touches[0].clientX;
+    touchStartY = event.touches[0].clientY;
+}
+
+function onTouchEnd(event) {
+    const touchEndX = event.changedTouches[0].clientX;
+    const touchEndY = event.changedTouches[0].clientY;
+
+    const deltaX = touchEndX - touchStartX;
+    const deltaY = touchEndY - touchStartY;
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+    if (distance < 10) { // Adjust the threshold as needed
+        onMouseClick(event);
+    }
+}
+
+function onMouseDown(event) {
+    touchStartX = event.clientX;
+    touchStartY = event.clientY;
+}
+
+function onMouseUp(event) {
+    const mouseEndX = event.clientX;
+    const mouseEndY = event.clientY;
+
+    const deltaX = mouseEndX - touchStartX;
+    const deltaY = mouseEndY - touchStartY;
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+    if (distance < 10) { // Adjust the threshold as needed
+        onMouseClick(event);
+    }
+}
+
 
 //#region Startup
 controls.addEventListener('end', () => resetControls())
-window.addEventListener('click', onMouseClick, false);
+if (/Mobi|Android/i.test(navigator.userAgent)) {
+    window.addEventListener('touchstart', onTouchStart, false);
+    window.addEventListener('touchend', onTouchEnd, false);
+} else {
+    window.addEventListener('mousedown', onMouseDown, false);
+    window.addEventListener('mouseup', onMouseUp, false);
+}
 if (getCookieByName('vote')) {
     showVotedState(getCookieByName('vote'), false)
 } else {

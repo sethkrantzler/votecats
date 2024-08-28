@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "predeploy": "npm run build",
+    "build": "vite build && echo www.kittycity.vote > dist/CNAME && powershell -Command \"New-Item -ItemType Directory -Force -Path dist/assets/fonts; Move-Item -Path dist/fonts/* -Destination dist/assets/fonts/; Remove-Item -Recurse -Force dist/fonts\"",
     "deploy": "gh-pages -d dist",
     "preview": "vite preview"
 
