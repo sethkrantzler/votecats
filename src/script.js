@@ -53,7 +53,7 @@ const fontLoader = new FontLoader()
 
 //#region Lights
 // Ambient light
-const ambientLight = new THREE.AmbientLight('#fff', 3.5)
+const ambientLight = new THREE.AmbientLight('#fff', 2.75)
 scene.add(ambientLight)
 
 // // React area light
@@ -96,22 +96,33 @@ const shelfARMTexture = textureLoader.load('./textures/shelf/wood_peeling_paint_
 const shelfNormalTexture = textureLoader.load('./textures/shelf/wood_peeling_paint_weathered_nor_gl_1k.jpg')
 
 // Posters
-const posterAlphaTexture = textureLoader.load('./textures/posters/PosterAlpha.jpg')
+const posterAlphaTexture = textureLoader.load('./textures/posters/CardAlphaTexture.jpg')
 const charmanderPosterColorTexture = textureLoader.load('./textures/posters/CharmanderPosterColor.jpg')
 const charmanderPosterMetalTexture = textureLoader.load('./textures/posters/CharmanderPosterMetal.jpg')
+charmanderPosterColorTexture.colorSpace = THREE.SRGBColorSpace
+const squirtlePosterColorTexture = textureLoader.load('./textures/posters/SquirtlePosterColor.jpg')
+const squirtlePosterMetalTexture = textureLoader.load('./textures/posters/SquirtlePosterMetal.jpg')
+squirtlePosterColorTexture.colorSpace = THREE.SRGBColorSpace
+
 
 
 //#region Materials
 const charmanderPaperMaterial = new THREE.MeshStandardMaterial({
-    // alphaMap: posterAlphaTexture,
+    alphaMap: posterAlphaTexture,
     transparent: true,
     map: charmanderPosterColorTexture,
     metalnessMap: charmanderPosterMetalTexture,
     metalness: 1,
     roughness: 0.35
 })
-const squirtlePaperMaterial = new THREE.MeshBasicMaterial({color: '#019', transparent: true})
-
+const squirtlePaperMaterial = new THREE.MeshStandardMaterial({
+    alphaMap: posterAlphaTexture,
+    transparent: true,
+    map: squirtlePosterColorTexture,
+    metalnessMap: squirtlePosterMetalTexture,
+    metalness: 1,
+    roughness: 0.35
+})
 //#endregion
 
 //#region Models
@@ -305,7 +316,7 @@ function generateVotingBooth() {
 
     // Positioning
     thumbtackBlue.rotation.set(Math.PI / 2, Math.random() * -0.6, Math.random()*-0.3)
-    thumbtackBlue.position.set(posterOffset, 1.15*paperScale*0.5 - 0.09, 0.1)
+    thumbtackBlue.position.set(posterOffset + 0.05, 1.15*paperScale*0.5 - 0.09, 0.1)
     thumbtackRed.rotation.set(Math.PI / 2, Math.random() * 0.6, Math.random()*0.3)
     thumbtackRed.position.set(-posterOffset, 1.15*paperScale*0.5 - 0.1, 0.1)
     charmanderPaperModel.position.x = 0 - posterOffset
@@ -424,11 +435,11 @@ function normalControls() {
 }
 
 function clampedControls() {
-    controls.enableRotate = false
-    controls.maxAzimuthAngle = 0
-    controls.minAzimuthAngle = 0
-    controls.minPolarAngle = Math.PI/2
-    controls.maxPolarAngle = Math.PI/2
+    controls.enableRotate = true
+    controls.maxAzimuthAngle =  Math.PI / 128
+    controls.minAzimuthAngle = -Math.PI / 128
+    controls.minPolarAngle = Math.PI/2 + -Math.PI / 128
+    controls.maxPolarAngle = Math.PI/2 + Math.PI / 128
     controls.maxDistance = 7
     controls.minDistance = 6
 }
@@ -590,7 +601,7 @@ function animatePosterIn(mesh) {
 }
 
 function animateThumbtackOut(mesh) {
-    lastThumbtackCoordinates = new THREE.Vector3(mesh === thumbtackRed ? -posterOffset : posterOffset, 1.15*paperScale*0.5 - 0.09, 0.1)
+    lastThumbtackCoordinates = new THREE.Vector3(mesh === thumbtackRed ? -posterOffset : posterOffset + 0.05, 1.15*paperScale*0.5 - 0.09, 0.1)
     gsap.to(mesh.rotation, { duration: 0.2, x:  Math.PI / 4})
     gsap.to(mesh.rotation, { delay: 0.1, duration: 0.2, x:  Math.PI / 2})
     gsap.to(mesh.position, { duration: 0.3, y: mesh.position.y + 0.5, z: mesh.position.z + 0.3, ease: 'power1.out'})
