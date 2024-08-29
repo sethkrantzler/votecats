@@ -105,6 +105,10 @@ const squirtlePosterMetalTexture = textureLoader.load('./textures/posters/Squirt
 squirtlePosterColorTexture.colorSpace = THREE.SRGBColorSpace
 
 
+// Sticker
+const stickerAlphaTexture = textureLoader.load('./textures/stickers/StickerAlpha.jpg')
+const stickerColorTexture = textureLoader.load('./textures/stickers/StickerColor.jpg')
+stickerColorTexture.colorSpace = THREE.SRGBColorSpace
 
 //#region Materials
 const charmanderPaperMaterial = new THREE.MeshStandardMaterial({
@@ -246,6 +250,53 @@ function generateVotingBooth() {
             voteText = text
         }
     )
+
+    // Stickers
+    function createSticker(text, pos, scale) {
+        fontLoader.load(
+            './3dfonts/optimer_bold.typeface.json',
+            (font) => {
+                const sticker = new THREE.Group();
+                const stickerBody = new THREE.Mesh(
+                    new THREE.CircleGeometry(1*scale, 10),
+                    new THREE.MeshStandardMaterial({
+                        transparent: true,
+                        alphaMap: stickerAlphaTexture,
+                        map: stickerColorTexture,
+                        metalness: 0.6,
+                        roughness: 0.3
+                    })
+                );
+                const stickerNumber = new THREE.Mesh(
+                    new TextGeometry(
+                        text,
+                        {
+                            font: font,
+                            size: 0.6*scale,
+                            height: 0.01,
+                            curveSegments: 8,
+                        }
+                    ),
+                    new THREE.MeshStandardMaterial({
+                        color: '#000',
+                        metalness: 1,
+                        roughness: 0.25
+                    })
+                );
+                stickerNumber.geometry.center();
+                if (text==='1') stickerNumber.position.x += -0.05
+                stickerNumber.position.z = 0.01;
+                sticker.add(stickerBody, stickerNumber);
+                sticker.rotation.z = Math.PI/24
+                scene.add(sticker);
+                sticker.position.copy(pos);
+            }
+        );
+    }
+    
+    createSticker('1', new THREE.Vector3(-1.85, 4.4, 0.1), 0.8);
+    createSticker('2', new THREE.Vector3(-0.75, -2.15, 1.51), 0.425);
+    
     
     // Shelf
     const shelf = new THREE.Mesh(
@@ -435,11 +486,7 @@ function normalControls() {
 }
 
 function clampedControls() {
-    controls.enableRotate = true
-    controls.maxAzimuthAngle =  Math.PI / 128
-    controls.minAzimuthAngle = -Math.PI / 128
-    controls.minPolarAngle = Math.PI/2 + -Math.PI / 128
-    controls.maxPolarAngle = Math.PI/2 + Math.PI / 128
+    controls.enableRotate = false
     controls.maxDistance = 7
     controls.minDistance = 6
 }
