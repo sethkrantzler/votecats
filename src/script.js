@@ -110,6 +110,12 @@ const stickerAlphaTexture = textureLoader.load('./textures/stickers/StickerAlpha
 const stickerColorTexture = textureLoader.load('./textures/stickers/StickerColor.jpg')
 stickerColorTexture.colorSpace = THREE.SRGBColorSpace
 
+// Voting Pins
+const votingPinCharmanderTexture = textureLoader.load('./textures/pins/charmanderPinColor.jpg')
+const votingPinSquirtleTexture = textureLoader.load('./textures/pins/squirtlePinColor.jpg')
+votingPinSquirtleTexture.colorSpace = THREE.SRGBColorSpace
+votingPinCharmanderTexture.colorSpace = THREE.SRGBColorSpace
+
 //#region Materials
 const charmanderPaperMaterial = new THREE.MeshStandardMaterial({
     alphaMap: posterAlphaTexture,
@@ -385,15 +391,24 @@ function generateVotingPin(vote) {
     // Create the disc
     const button = new THREE.Group()
     scene.add(button)
-    const metalMaterial = new THREE.MeshStandardMaterial({ color: 0x808080 }); // Grey pin
-
 
     // Create the shield
-    const shieldGeometry = new THREE.SphereGeometry( 1.4, 32, 32, undefined, undefined, 0, debugObject.buttonSize); 
-    const material = new THREE.MeshBasicMaterial( { color: vote === ModelState.SQUIRTLE ? 0x0000ff: 0xff0000 } ); 
+    const shieldGeometry = new THREE.CylinderGeometry( 0.35, 0.35, 0.05, 32, 5); 
+    const material = new THREE.MeshPhysicalMaterial({ 
+            map: vote === ModelState.CHARMANDER ? votingPinCharmanderTexture : votingPinSquirtleTexture,
+            clearcoat: 0.6,
+            metalness: 0.4,
+            roughness: 0.25,
+            clearcoatRoughness: 0.2,
+    });
     const shield = new THREE.Mesh( shieldGeometry, material );
-    shield.rotation.x = Math.PI / 2
+    shield.position.z = 1.5
+    shield.rotation.z = Math.PI/2
+    shield.rotation.y = Math.PI/2
     button.add(shield);
+    const directionalLight3 = new THREE.DirectionalLight('#fff', 0.25)
+    directionalLight3.position.set(-0.5, 0, 2)
+    scene.add(directionalLight3)
 
     // // Create the back
     // const backGeometry = new THREE.SphereGeometry( 1.4, 32, 32, undefined, undefined, Math.PI*2 - debugObject.buttonSize, debugObject.buttonSize ); 
@@ -438,6 +453,7 @@ function generateVotingPin(vote) {
     buttonContainer.add(button)
     buttonContainer.position.add(pivot)
     buttonContainer.position.y = 12
+    shield.position.z = 1.75
     scene.add(buttonContainer)
     buttonContainer.add(wall)
     return buttonContainer
@@ -685,10 +701,12 @@ function animatePinIn(mesh, animateY) {
         mesh.position.y = 0
     }
     // Create a GSAP timeline
-    let tl = gsap.timeline({ repeat: -1, yoyo: true});
+    let tl = gsap.timeline({ repeat: -1,});
 
     tl.to(mesh.rotation, { duration: 4, y: Math.PI / 12, ease: 'power2.inOut' })
     .to(mesh.rotation, { duration: 4, y: -Math.PI / 12, ease: 'power2.inOut' })
+    .to(mesh.rotation, { duration: 2, y: 0, ease: 'power2.inOut' })
+    .to(mesh.rotation, { duration: 2, y: 0, ease: 'power2.inOut' })
 }
 
 function shakeLetter(mesh, delay = 0) {
@@ -806,7 +824,7 @@ function onMouseUp(event) {
     const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
     const time = Date.now()-startTime
 
-    if (time < 300 || distance < 2 || (currentState != ModelState.NONE && distance > 50)) {
+    if (time < 300 || distance < 2 || currentState != ModelState.NONE) {
         onMouseClick(event);
     }
 }
