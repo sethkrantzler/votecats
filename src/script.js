@@ -393,7 +393,7 @@ function generateVotingPin(vote) {
     scene.add(button)
 
     // Create the shield
-    const shieldGeometry = new THREE.CylinderGeometry( 0.35, 0.35, 0.05, 32, 5); 
+    const shieldGeometry = new THREE.CylinderGeometry( 0.3, 0.3, 0.05, 32, 5); 
     const material = new THREE.MeshPhysicalMaterial({ 
             map: vote === ModelState.CHARMANDER ? votingPinCharmanderTexture : votingPinSquirtleTexture,
             clearcoat: 0.6,
