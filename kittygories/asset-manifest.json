@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/kittygories/static/css/main.c8764a04.css",
-    "main.js": "/kittygories/static/js/main.0c0a4099.js",
+    "main.js": "/kittygories/static/js/main.8f826093.js",
     "static/js/453.0cd9d4a4.chunk.js": "/kittygories/static/js/453.0cd9d4a4.chunk.js",
     "index.html": "/kittygories/index.html",
     "main.c8764a04.css.map": "/kittygories/static/css/main.c8764a04.css.map",
-    "main.0c0a4099.js.map": "/kittygories/static/js/main.0c0a4099.js.map",
+    "main.8f826093.js.map": "/kittygories/static/js/main.8f826093.js.map",
     "453.0cd9d4a4.chunk.js.map": "/kittygories/static/js/453.0cd9d4a4.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.c8764a04.css",
-    "static/js/main.0c0a4099.js"
+    "static/js/main.8f826093.js"
   ]
 }
