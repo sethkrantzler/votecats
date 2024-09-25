@@ -3,13 +3,11 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://www.kittycity.vote/kittygories",
   "scripts": {
     "dev": "vite",
     "build": "vite build && echo www.kittycity.vote > dist/CNAME && powershell -Command \"New-Item -ItemType Directory -Force -Path dist/assets/fonts; Move-Item -Path dist/fonts/* -Destination dist/assets/fonts/; Remove-Item -Recurse -Force dist/fonts\"",
     "deploy": "gh-pages -d dist",
     "preview": "vite preview"
-
   },
   "devDependencies": {
     "gh-pages": "^6.1.1",
