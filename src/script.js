@@ -1,847 +1,337 @@
 import * as THREE from 'three'
-import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'
-import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js'
-import GUI from 'lil-gui'
 import gsap from 'gsap'
-import { ModelState } from './constants'
-import { db } from './firebaseConfig';
-import { collection, addDoc } from 'firebase/firestore';
-import { OrbitControls} from 'three/examples/jsm/Addons.js'
-import { GlitterMaterial } from './glitter.js'
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
-//#region Variables
-const gui = new GUI()
-gui.hide()
-const paperScale = 2.5
-const thumbtackScale = 1 / 6
-const posterOffset = 1.15
-let currentState = ModelState.NONE
-let didVote = false
-let lastPosterCoordinates = undefined
-let lastThumbtackCoordinates = undefined
-let votePin = undefined
-let charmanderPaperModel = undefined
-let squirtlePaperModel = undefined
-let thumbtackRed = undefined
-let thumbtackBlue = undefined
-let helperText = undefined
-let voteBox = undefined
-let touchStartX, touchStartY = undefined
-let startTime = undefined
-let voteInterval = undefined
-let voteText = undefined
-//#endregion
-
-//#region Firebase
-
-//#region Canvas
 const canvas = document.querySelector('canvas.webgl')
-//#endregion
+const hint = document.querySelector('.hint')
 
-//#region Raycaster
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
-
-//#region Scene
+// Scene
 const scene = new THREE.Scene()
-scene.background = new THREE.Color(0xd2b48c)
-//#endregion
+scene.background = new THREE.Color(0x0e101a)
 
-//#region Fonts
-const fontLoader = new FontLoader()
-//#endregion
-
-//#region Lights
-// Ambient light
-const ambientLight = new THREE.AmbientLight('#fff', 2.75)
-scene.add(ambientLight)
-
-// // React area light
-// RectAreaLightUniformsLib.init()
-// const rectAreaLight = new THREE.RectAreaLight('#fff', 1, 6, 12)
-// rectAreaLight.position.set(0, 0, 8)
-// rectAreaLight.lookAt(new THREE.Vector3())
-// scene.add(rectAreaLight)
-// const helper = new RectAreaLightHelper( rectAreaLight );
-// rectAreaLight.add( helper ); // helper must be added as a child of the light
-
-// Directional light
-const directionalLight = new THREE.DirectionalLight('#fff', 0.5)
-directionalLight.position.set(0, 4, 9.5)
-scene.add(directionalLight)
-
-const directionalLight2 = new THREE.DirectionalLight('#fff', 0.5)
-directionalLight2.position.set(0, -4.5, 9.5)
-scene.add(directionalLight2)
-
-
-//#endregion
-
-//#region Textures
-const textureLoader = new THREE.TextureLoader()
-
-// Wall
-const wallColorTexture = textureLoader.load('./textures/wall/painted_plaster_wall_diff_1k.jpg')
-wallColorTexture.colorSpace = THREE.SRGBColorSpace
-
-// Box
-const boxColorTexture = textureLoader.load('./textures/box/green_metal_rust_diff_1k.jpg')
-const boxARMTexture = textureLoader.load('./textures/box/green_metal_rust_arm_1k.jpg')
-const boxDisplacementTexture = textureLoader.load('./textures/box/green_metal_rust_nor_gl_1k.jpg')
-boxColorTexture.colorSpace = THREE.SRGBColorSpace
-
-// Shelf
-const shelfColorTexture = textureLoader.load('./textures/shelf/wood_peeling_paint_weathered_diff_1k.jpg')
-const shelfARMTexture = textureLoader.load('./textures/shelf/wood_peeling_paint_weathered_arm_1k.jpg')
-const shelfNormalTexture = textureLoader.load('./textures/shelf/wood_peeling_paint_weathered_nor_gl_1k.jpg')
-
-// Posters
-const posterAlphaTexture = textureLoader.load('./textures/posters/CardAlphaTexture.jpg')
-const charmanderPosterColorTexture = textureLoader.load('./textures/posters/CharmanderPosterColor.jpg')
-const charmanderPosterMetalTexture = textureLoader.load('./textures/posters/CharmanderPosterMetal.jpg')
-charmanderPosterColorTexture.colorSpace = THREE.SRGBColorSpace
-const squirtlePosterColorTexture = textureLoader.load('./textures/posters/SquirtlePosterColor.jpg')
-const squirtlePosterMetalTexture = textureLoader.load('./textures/posters/SquirtlePosterMetal.jpg')
-squirtlePosterColorTexture.colorSpace = THREE.SRGBColorSpace
-
-
-// Sticker
-const stickerAlphaTexture = textureLoader.load('./textures/stickers/StickerAlpha.jpg')
-const stickerColorTexture = textureLoader.load('./textures/stickers/StickerColor.jpg')
-stickerColorTexture.colorSpace = THREE.SRGBColorSpace
-
-// Voting Pins
-const votingPinCharmanderTexture = textureLoader.load('./textures/pins/charmanderPinColor.jpg')
-const votingPinSquirtleTexture = textureLoader.load('./textures/pins/squirtlePinColor.jpg')
-votingPinSquirtleTexture.colorSpace = THREE.SRGBColorSpace
-votingPinCharmanderTexture.colorSpace = THREE.SRGBColorSpace
-
-//#region Materials
-const charmanderPaperMaterial = new THREE.MeshStandardMaterial({
-    alphaMap: posterAlphaTexture,
-    transparent: true,
-    map: charmanderPosterColorTexture,
-    metalnessMap: charmanderPosterMetalTexture,
-    metalness: 1,
-    roughness: 0.35
-})
-const squirtlePaperMaterial = new THREE.MeshStandardMaterial({
-    alphaMap: posterAlphaTexture,
-    transparent: true,
-    map: squirtlePosterColorTexture,
-    metalnessMap: squirtlePosterMetalTexture,
-    metalness: 1,
-    roughness: 0.35
-})
-//#endregion
-
-//#region Models
-// Voting Booth
-function generateVotingBooth() {
-    // Wall
-    const wall = new THREE.Mesh(
-        new THREE.PlaneGeometry(12, 12, 30, 30),
-        new THREE.MeshStandardMaterial({
-            color: 0xfffff0,
-            map: wallColorTexture,
-        })
-    )
-    scene.add(wall)
-
-    // Helper Text
-
-    fontLoader.load(
-        './3dfonts/helvetiker_bold.typeface.json',
-        (font) =>
-        {
-            const customUniforms = {
-                uGlitterSize: { value: 20 },
-                uGlitterDensity: { value: 1.2}
-              }
-              
-            const textMaterial = new GlitterMaterial(customUniforms, {
-                color: '#643b9f', // bronze #9c7e41
-            })
-            helperText = new THREE.Group()
-            scene.add(helperText)
-            const helperTextString1 = 'PICK YOUR'
-            const helperTextString2 = 'PRESIDENT'
-            helperTextString1.split('').forEach((char, idx) => {
-                const textGeometry = new TextGeometry(
-                    char,
-                    {
-                        font: font,
-                        size: 0.5,
-                        depth: 0.02,
-                        curveSegments: 8,
-                    }
-                )
-                textGeometry.center()
-                const text = new THREE.Mesh(textGeometry, textMaterial)
-                text.position.x = helperTextString1[idx-1]=== "I" ? (idx * 0.42) : (idx * 0.5) // space text
-                text.position.x += 0.25
-                text.rotation.z = (Math.random() - 0.5) * Math.PI / 16
-                helperText.add(text)
-            })
-            helperTextString2.split('').forEach((char, idx) => {
-                const textGeometry = new TextGeometry(
-                    char,
-                    {
-                        font: font,
-                        size: 0.5,
-                        depth: 0.02,
-                        curveSegments: 12,
-                    }
-                )
-                textGeometry.center()
-                const text = new THREE.Mesh(textGeometry, textMaterial)
-                text.position.x = helperTextString2[idx-1]=== "I" ? (idx * 0.49) : (idx * 0.51) // space text
-                text.position.x += 0.25
-                text.position.y = -1.25
-                text.rotation.z = (Math.random() - 0.5) * Math.PI / 16
-                helperText.add(text)
-            })
-            helperText.position.y = 3.5
-            helperText.position.x = -2.25
-
-            
-        }
-    )
-    
-    // Box
-    voteBox = new THREE.Group()
-    scene.add(voteBox)
-    const slit = new THREE.Mesh(
-        new THREE.CapsuleGeometry(0.25, 1.5, 3, 2),
-        new THREE.MeshBasicMaterial({
-            color: '#000'
-        })
-    )
-    slit.rotation.z = Math.PI / 2
-    slit.position.y = 1
-    const box = new THREE.Mesh(
-        new THREE.BoxGeometry(3, 2, 1),
-        new THREE.MeshStandardMaterial({
-            map: boxColorTexture,
-            aoMap: boxARMTexture,
-            displacementMap: boxDisplacementTexture,
-            displacementScale: 0.3,
-            displacementBias: -0.15
-        })
-    )
-    voteBox.add(slit, box)
-    fontLoader.load(
-        './3dfonts/optimer_bold.typeface.json',
-        (font) =>
-        {
-            const textMaterial = new THREE.MeshStandardMaterial({
-                color: '#B87333',
-                metalness: 1,
-                roughness: 0.25
-
-            })
-            const textGeometry = new TextGeometry(
-                'VOTE',
-                {
-                    font: font,
-                    size: 0.5,
-                    depth: 0.02,
-                    curveSegments: 8,
-                }
-            )
-            textGeometry.center()
-            const text = new THREE.Mesh(textGeometry, textMaterial)
-            text.position.z = 0.501
-            voteBox.add(text)
-            voteText = text
-        }
-    )
-
-    // Stickers
-    function createSticker(text, pos, scale) {
-        fontLoader.load(
-            './3dfonts/optimer_bold.typeface.json',
-            (font) => {
-                const sticker = new THREE.Group();
-                const stickerBody = new THREE.Mesh(
-                    new THREE.CircleGeometry(1*scale, 10),
-                    new THREE.MeshStandardMaterial({
-                        transparent: true,
-                        alphaMap: stickerAlphaTexture,
-                        map: stickerColorTexture,
-                        metalness: 0.6,
-                        roughness: 0.3
-                    })
-                );
-                const stickerNumber = new THREE.Mesh(
-                    new TextGeometry(
-                        text,
-                        {
-                            font: font,
-                            size: 0.6*scale,
-                            height: 0.01,
-                            curveSegments: 8,
-                        }
-                    ),
-                    new THREE.MeshStandardMaterial({
-                        color: '#000',
-                        metalness: 1,
-                        roughness: 0.25
-                    })
-                );
-                stickerNumber.geometry.center();
-                if (text==='1') stickerNumber.position.x += -0.05
-                stickerNumber.position.z = 0.01;
-                sticker.add(stickerBody, stickerNumber);
-                sticker.rotation.z = Math.PI/24
-                scene.add(sticker);
-                sticker.position.copy(pos);
-            }
-        );
-    }
-    
-    createSticker('1', new THREE.Vector3(-1.85, 4.4, 0.1), 0.8);
-    createSticker('2', new THREE.Vector3(-0.75, -2.15, 1.51), 0.425);
-    
-    
-    // Shelf
-    const shelf = new THREE.Mesh(
-        new THREE.BoxGeometry(10, 0.3, 2),
-        new THREE.MeshStandardMaterial({
-            map: shelfColorTexture,
-            aoMap: shelfARMTexture,
-            roughnessMap: shelfARMTexture,
-            metalnessMap: shelfARMTexture,
-            normalMap: shelfNormalTexture,
-        })
-    )
-    scene.add(shelf)
-    
-    // Posters
-    charmanderPaperModel = new THREE.Mesh(
-        new THREE.PlaneGeometry(0.8*paperScale, 1.15*paperScale, 12, 12),
-        charmanderPaperMaterial
-    )
-    
-    squirtlePaperModel = new THREE.Mesh(
-        new THREE.PlaneGeometry(0.8*paperScale, 1.15*paperScale, 12,12),
-        squirtlePaperMaterial
-    )
-    scene.add(squirtlePaperModel)
-    scene.add(charmanderPaperModel)
-    
-    function generateThumbtack(color) {
-        const thumbtack = new THREE.Group()
-        const tipMaterial = new THREE.MeshBasicMaterial({ 
-            color: 0x808080
-        });
-        const coneGeometry = new THREE.ConeGeometry(0.1*thumbtackScale, 0.2*thumbtackScale, 16);
-        const cone = new THREE.Mesh(coneGeometry, tipMaterial);
-        cone.position.y = -0.75*thumbtackScale;
-        cone.rotation.z = Math.PI
-        thumbtack.add(cone);
-    
-        const cylinderGeometry = new THREE.CylinderGeometry(0.1*thumbtackScale, 0.1*thumbtackScale, 0.8*thumbtackScale, 16);
-        const cylinder = new THREE.Mesh(cylinderGeometry, tipMaterial);
-        cylinder.position.y = -0.25*thumbtackScale;
-        thumbtack.add(cylinder);
-    
-        const headMaterial = new THREE.MeshStandardMaterial({ 
-            color: color,
-            metalness: 0.4,
-            roughness: 0.3
-        }); // Grey color
-        const headCylinder1 = new THREE.Mesh(new THREE.CylinderGeometry(0.2*thumbtackScale, 0.5*thumbtackScale, 0.1*thumbtackScale, 16), headMaterial);
-        headCylinder1.position.y = 0;
-        thumbtack.add(headCylinder1);
-    
-        const headCylinder2 = new THREE.Mesh(new THREE.CylinderGeometry(0.2*thumbtackScale, 0.2*thumbtackScale, 0.6*thumbtackScale, 16), headMaterial);
-        headCylinder2.position.y = 0.3*thumbtackScale;
-        thumbtack.add(headCylinder2);
-    
-        const headCylinder3 = new THREE.Mesh(new THREE.CylinderGeometry(0.4*thumbtackScale, 0.2*thumbtackScale, 0.1*thumbtackScale, 16), headMaterial);
-        headCylinder3.position.y = 0.6*thumbtackScale;
-        thumbtack.add(headCylinder3);
-        return thumbtack;
-    }
-    
-    // Thumbtack
-    thumbtackRed = generateThumbtack(0xff0000)
-    scene.add(thumbtackRed)
-    thumbtackBlue = generateThumbtack(0x0000ff)
-    scene.add(thumbtackBlue)
-
-    // Positioning
-    thumbtackBlue.rotation.set(Math.PI / 2, Math.random() * -0.6, Math.random()*-0.3)
-    thumbtackBlue.position.set(posterOffset + 0.05, 1.15*paperScale*0.5 - 0.09, 0.1)
-    thumbtackRed.rotation.set(Math.PI / 2, Math.random() * 0.6, Math.random()*0.3)
-    thumbtackRed.position.set(-posterOffset, 1.15*paperScale*0.5 - 0.1, 0.1)
-    charmanderPaperModel.position.x = 0 - posterOffset
-    squirtlePaperModel.position.x = 0 + posterOffset
-    charmanderPaperModel.position.z = 0.025
-    squirtlePaperModel.position.z = 0.025
-    voteBox.position.y = -2.75
-    voteBox.position.z = 1
-    shelf.position.y = -3.75
-    shelf.position.z = 1
-}
-
-// Voting Pin
-function generateVotingPin(vote) {
-    // Create the disc
-    const button = new THREE.Group()
-    scene.add(button)
-
-    // Create the shield
-    const shieldGeometry = new THREE.CylinderGeometry( 0.3, 0.3, 0.05, 32, 5); 
-    const material = new THREE.MeshPhysicalMaterial({ 
-            map: vote === ModelState.CHARMANDER ? votingPinCharmanderTexture : votingPinSquirtleTexture,
-            clearcoat: 0.6,
-            metalness: 0.4,
-            roughness: 0.25,
-            clearcoatRoughness: 0.2,
-    });
-    const shield = new THREE.Mesh( shieldGeometry, material );
-    shield.position.z = 1.5
-    shield.rotation.z = Math.PI/2
-    shield.rotation.y = Math.PI/2
-    button.add(shield);
-    const directionalLight3 = new THREE.DirectionalLight('#fff', 0.25)
-    directionalLight3.position.set(-0.5, 0, 2)
-    scene.add(directionalLight3)
-
-    // // Create the back
-    // const backGeometry = new THREE.SphereGeometry( 1.4, 32, 32, undefined, undefined, Math.PI*2 - debugObject.buttonSize, debugObject.buttonSize ); 
-    // const back = new THREE.Mesh( backGeometry, metalMaterial );
-    // back.rotation.x = Math.PI / 2
-    // button.add(back);
-
-    // // Create the pin
-    // const pin = new THREE.Group()
-    // const coneGeometry = new THREE.ConeGeometry(0.1*pinScale, 0.2*pinScale, 16);
-    // const cone = new THREE.Mesh(coneGeometry, metalMaterial);
-    // cone.position.x = -1.35*pinScale;
-    // cone.rotation.z = Math.PI / 2
-    // pin.add(cone);
-
-    // const cylinderGeometry = new THREE.CylinderGeometry(0.1*pinScale, 0.1*pinScale, 1.5*pinScale, 16);
-    // const cylinder = new THREE.Mesh(cylinderGeometry, metalMaterial);
-    // cylinder.position.x = -0.5*pinScale;
-    // cylinder.rotation.z = Math.PI / 2
-    // pin.add(cylinder);
-    // pin.rotation.y = -Math.PI/16
-    // pin.position.z = 1.29
-    // pin.position.x = 0.2
-    // button.add(pin)
-
-    button.position.y = -0.1
-    button.position.z = 4
-    const box = new THREE.Box3().setFromObject(button);
-
-    // White Background
-    const wall = new THREE.Mesh(
-        new THREE.PlaneGeometry(10, 4, 2, 2),
-        new THREE.MeshBasicMaterial({
-            color: vote === ModelState.CHARMANDER ? '#F8C8DC' : '#A7C7E7'
-        })
-    )
-
-    // Determine the pivot point (one end of the bounding box)
-    const pivot = new THREE.Vector3(box.x, box.y, (box.min.z+box.max.z) / 2);
-    button.position.sub(pivot)
-    const buttonContainer = new THREE.Group()
-    buttonContainer.add(button)
-    buttonContainer.position.add(pivot)
-    buttonContainer.position.y = 12
-    shield.position.z = 1.75
-    scene.add(buttonContainer)
-    buttonContainer.add(wall)
-    return buttonContainer
-}
-
-//#region Sizes
+// Sizes
 const sizes = {
     width: window.innerWidth,
-    height: window.innerHeight
+    height: window.innerHeight,
 }
 
-window.addEventListener('resize', () =>
-{
-    // Update sizes
-    sizes.width = window.innerWidth
-    sizes.height = window.innerHeight
-
-    // Update camera
-    camera.aspect = sizes.width / sizes.height
-    camera.updateProjectionMatrix()
-
-    // Update renderer
-    renderer.setSize(sizes.width, sizes.height)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-})
-//#endregion
-
-
-//#region Camera
-const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 15)
-camera.position.z = 7
+// Camera
+const camera = new THREE.PerspectiveCamera(50, sizes.width / sizes.height, 0.1, 50)
+camera.position.set(0, 0, 5)
 scene.add(camera)
 
-//#region Controls
-const controls = new OrbitControls(camera, canvas)
-controls.enablePan = false
-
-function normalControls() {
-    controls.enableRotate = true
-    controls.maxAzimuthAngle =  Math.PI / 8
-    controls.minAzimuthAngle = -Math.PI / 8
-    controls.minPolarAngle = Math.PI/2 + -Math.PI / 8
-    controls.maxPolarAngle = Math.PI/2 + Math.PI / 8
-    controls.maxDistance = 7
-    controls.minDistance = 4
-}
-
-function clampedControls() {
-    controls.enableRotate = false
-    controls.maxDistance = 7
-    controls.minDistance = 6
-}
-
-normalControls()
-
-//#region Renderer
+// Renderer
 const renderer = new THREE.WebGLRenderer({
-    canvas: canvas
+    canvas,
+    antialias: true,
 })
 renderer.setSize(sizes.width, sizes.height)
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-renderer.shadowMap.enabled = true
+renderer.outputColorSpace = THREE.SRGBColorSpace
 
-//#region Animate
+// Controls
+const controls = new OrbitControls(camera, renderer.domElement)
+controls.enableDamping = true
+controls.enablePan = false
+const angleLimit = THREE.MathUtils.degToRad(3)
+controls.minDistance = 3.5
+controls.maxDistance = 7
+controls.minPolarAngle = Math.PI / 2 - angleLimit
+controls.maxPolarAngle = Math.PI / 2 + angleLimit
+controls.minAzimuthAngle = -angleLimit
+controls.maxAzimuthAngle = angleLimit
+controls.target.set(0, 0, 0)
+const defaultTarget = new THREE.Vector3(0, 0, 0)
+const defaultCamPos = camera.position.clone()
+
+// Lights
+scene.add(new THREE.AmbientLight(0xffffff, 1.2))
+const keyLight = new THREE.DirectionalLight(0xffffff, 2.2)
+keyLight.position.set(2.5, 2.4, 3.8)
+const keyTarget = new THREE.Object3D()
+keyTarget.position.set(0, 0.9, 0)
+scene.add(keyTarget)
+keyLight.target = keyTarget
+scene.add(keyLight)
+
+const rimLight = new THREE.DirectionalLight(0x92c5ff, 1.1)
+rimLight.position.set(-2.4, 1.6, 3.2)
+const rimTarget = new THREE.Object3D()
+rimTarget.position.set(0, 0.9, 0)
+scene.add(rimTarget)
+rimLight.target = rimTarget
+scene.add(rimLight)
+
+// Resize handling
+window.addEventListener('resize', () => {
+    sizes.width = window.innerWidth
+    sizes.height = window.innerHeight
+    camera.aspect = sizes.width / sizes.height
+    camera.updateProjectionMatrix()
+    renderer.setSize(sizes.width, sizes.height)
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+})
+
+// Textures
+const textureLoader = new THREE.TextureLoader()
+const loadTexture = (path, options = { colorSpace: THREE.SRGBColorSpace }) => new Promise((resolve, reject) => {
+    textureLoader.load(
+        path,
+        (texture) => {
+            if (options && 'colorSpace' in options && options.colorSpace !== undefined) {
+                texture.colorSpace = options.colorSpace
+            }
+            resolve(texture)
+        },
+        undefined,
+        reject,
+    )
+})
+const gltfLoader = new GLTFLoader()
+const loadGLB = (path) => new Promise((resolve, reject) => {
+    gltfLoader.load(path, (gltf) => resolve(gltf), undefined, reject)
+})
+
+// Card helpers
+const spinTarget = 10
+const cards = [
+    {
+        name: 'squirtle',
+        color: './textures/cards/squirtle/color.jpg',
+        metal: './textures/cards/squirtle/metal.jpg',
+    },
+    {
+        name: 'charmander',
+        color: './textures/cards/charmander/color.jpg',
+        metal: './textures/cards/charmander/metal.jpg',
+    },
+]
+let packMesh
+let cardMesh
+let opening = false
+let opened = false
+let completedSpins = 0
+let spinSpeed = 0
+let accumulatedRotation = 0
+let hintCleared = false
+const spinMax = 18
+const spinBoost = 6
+const spinDecayPerSecond = 2.25
+const spinFloor = 3
+let cardBobTween
+const startCardBob = () => {
+    if (!cardMesh) return
+    cardBobTween?.kill()
+    cardBobTween = gsap.to(cardMesh.position, {
+        duration: 1.6,
+        y: 0.15,
+        repeat: -1,
+        yoyo: true,
+        ease: 'sine.inOut',
+    })
+}
+
+const hideHint = () => {
+    if (hintCleared || !hint) return
+    hintCleared = true
+    gsap.to(hint, {
+        duration: 0.4,
+        opacity: 0,
+        y: 10,
+        ease: 'power1.out',
+        onComplete: () => hint?.remove(),
+    })
+}
+
+const buildCard = (texture, alphaMap, metalMap) => {
+    const sideMaterial = new THREE.MeshStandardMaterial({
+        color: 0x1a1c27,
+        metalness: 0.15,
+        roughness: 0.8,
+    })
+
+    const faceMaterial = new THREE.MeshStandardMaterial({
+        map: texture,
+        alphaMap,
+        transparent: true,
+        metalnessMap: metalMap ?? null,
+        metalness: metalMap ? 1 : 0.5,
+        roughness: 0.32,
+    })
+
+    const geometry = new THREE.BoxGeometry(1.8, 2.6, 0.12)
+    const materials = [sideMaterial, sideMaterial, sideMaterial, sideMaterial, faceMaterial, faceMaterial]
+
+    return new THREE.Mesh(geometry, materials)
+}
+
+const disposeObject = (object) => {
+    object.traverse?.((child) => {
+        if (child.isMesh) {
+            child.geometry?.dispose()
+            if (Array.isArray(child.material)) {
+                child.material.forEach((mat) => {
+                    mat.map?.dispose()
+                    mat.metalnessMap?.dispose()
+                    mat.roughnessMap?.dispose()
+                    mat.normalMap?.dispose()
+                })
+            } else if (child.material) {
+                child.material.map?.dispose()
+                child.material.metalnessMap?.dispose()
+                child.material.roughnessMap?.dispose()
+                child.material.normalMap?.dispose()
+            }
+        }
+    })
+}
+
+const showCard = () => {
+    if (!cardMesh) return
+    cardMesh.visible = true
+    cardMesh.position.set(0, 5, 1)
+    cardMesh.rotation.set(-0.25, Math.PI, 0)
+
+    gsap.to(cardMesh.position, { duration: 1, y: 0, ease: 'bounce.out'})
+    gsap.to(cardMesh.rotation, {
+        duration: 1,
+        x: 0,
+        y: 0,
+        ease: 'power2.out',
+        onComplete: startCardBob,
+    })
+}
+
+const launchPack = () => {
+    if (!packMesh) return
+    const tl = gsap.timeline({
+        onComplete: () => {
+            scene.remove(packMesh)
+            disposeObject(packMesh)
+            showCard()
+        },
+    })
+
+        tl.to(packMesh.position, {
+                duration: 0.3,
+                x: -1.5,
+                y: 0.65,
+                z: -2.5,
+                ease: 'power2.out',
+        })
+            .to(packMesh.position, {
+                duration: 0.4,
+                x: 1.6,
+                y: 1.3,
+                z: -3.5,
+                ease: 'power2.inOut',
+            })
+            .to(packMesh.position, {
+                duration: 0.35,
+                x: 0,
+                y: 0.75,
+                z: -0.25,
+                ease: 'power2.inOut',
+            })
+            .to(packMesh.position, {
+                duration: 0.5,
+                x: 0,
+                y: 6.5,
+                z: 3.2,
+                ease: 'power2.in',
+            })
+
+    tl.to(packMesh.rotation, {
+        duration: 1.35,
+        x: Math.PI * 0.6,
+        y: packMesh.rotation.y + Math.PI * 1.6,
+        z: Math.PI * 0.25,
+        ease: 'power2.inOut',
+    }, 0)
+}
+
+const onPackClick = () => {
+    if (!packMesh || opened) return
+
+    if (!opening) {
+        opening = true
+        hideHint()
+        gsap.killTweensOf(packMesh?.rotation)
+        packMesh.rotation.y = 0
+        completedSpins = 0
+        accumulatedRotation = 0
+    }
+
+    spinSpeed = Math.min(spinSpeed + spinBoost, spinMax)
+}
+
+// Asset load + setup
+const pickCardForToday = () => {
+    const today = new Date()
+    const idx = today.getDate() % cards.length
+    return cards[idx]
+}
+
+// Asset load + setup
+const todayCard = pickCardForToday()
+
+Promise.all([
+    loadGLB('./pack/PackCompressed.glb'),
+    loadTexture(todayCard.color),
+    loadTexture(todayCard.metal, { colorSpace: undefined }),
+    loadTexture('./textures/posters/CardAlphaTexture.jpg', { colorSpace: undefined }),
+]).then(([packGltf, cardTexture, cardMetalTexture, alphaTexture]) => {
+    packMesh = packGltf.scene
+    packMesh.position.set(0, 3, 0)
+    packMesh.rotation.y = THREE.MathUtils.degToRad(10)
+    packMesh.scale.setScalar(1.2)
+    scene.add(packMesh)
+
+    cardMesh = buildCard(cardTexture, alphaTexture, cardMetalTexture)
+    cardMesh.visible = false
+    scene.add(cardMesh)
+
+    gsap.to(packMesh.position, {
+        duration: 1,
+        y: 0,
+        ease: 'back.out(1.7)',
+    })
+}).catch((error) => {
+    console.error('Failed to load pack assets', error)
+})
+
+// Interaction
+window.addEventListener('click', onPackClick)
+window.addEventListener('touchend', onPackClick)
+
+// Animation loop
 const clock = new THREE.Clock()
+const tick = () => {
+    const delta = clock.getDelta()
 
-const tick = () =>
-{
-    const elapsedTime = clock.getElapsedTime()
+    if (opening && packMesh && !opened) {
+        spinSpeed = Math.max(spinFloor, spinSpeed - spinDecayPerSecond * delta)
 
-    // Update controls
+        const spinStep = delta * spinSpeed
+        packMesh.rotation.y += spinStep
+        accumulatedRotation += spinStep
+
+        while (accumulatedRotation >= Math.PI * 2) {
+            accumulatedRotation -= Math.PI * 2
+            completedSpins += 1
+        }
+
+        if (completedSpins >= spinTarget) {
+            opened = true
+            opening = false
+            launchPack()
+        }
+    }
+
     controls.update()
-
-    // Render
     renderer.render(scene, camera)
-
-    // Call tick again on the next frame
     window.requestAnimationFrame(tick)
 }
 
-//#region Object Transitions
-function selectPoster(mesh) {
-    const selection = stateFromModel(mesh)
-    // deselect
-    if (currentState == selection) {
-        normalControls()
-        animateThumbtackIn(mesh === charmanderPaperModel ? thumbtackRed : thumbtackBlue)
-        animatePosterIn(mesh)
-        currentState = ModelState.NONE
-        stopVoteHelper()
-        return
-    }
-    // select
-    clampedControls()
-    startVoteHelper()
-    currentState = selection
-    animateThumbtackOut(mesh === charmanderPaperModel ? thumbtackRed : thumbtackBlue)
-    animatePosterOut(mesh)
-}
-
-async function castVote() {
-    try {
-        stopVoteHelper()
-        animateBallotIn(modelFromState());
-        const docRef = await addDoc(collection(db, 'votes'), {vote: currentState})
-        return docRef.id ? hasVoted(currentState) : setTimeout(() => animateBallotOut(modelFromState()), 500)
-    } catch (error) {
-        setTimeout(() => animateBallotOut(modelFromState()), 500)
-        startVoteHelper()
-        console.error('Error casting vote:', error)
-    }
-}
-
-function hasVoted(vote) {
-    document.cookie = `vote=${vote}; path=/; max-age=31536000`; // Cookie valid for 1 year
-    showVotedState(vote);
-}
-
-function startVoteHelper() {
-    if (voteInterval) {
-        clearInterval(voteInterval)
-    }
-    voteInterval = setInterval(() => {
-        shakeLetter(voteText, 3);
-    }, 5000);
-}
-
-function stopVoteHelper() {
-    clearInterval(voteInterval);
-}
-
-function showHelpers() {
-    helperText.children.forEach((letter, index) => {
-        setTimeout(() => {
-            shakeLetter(letter);
-        }, index * 50);
-    });
-}
-
-
-function showVotedState(vote, shouldAnimate = true) {
-    didVote = true
-    controls.enabled = false
-    votePin = generateVotingPin(vote)
-    animatePinIn(votePin, shouldAnimate)
-    document.getElementById('hud-top').classList.add('animate-down')
-    document.getElementById('hud-bottom').classList.add('animate-up')
-    document.getElementById('voting').classList.add(vote === ModelState.CHARMANDER ? 'red' : 'blue')
-}
-
-function stateFromModel(mesh) {
-    return mesh == charmanderPaperModel ? ModelState.CHARMANDER : ModelState.SQUIRTLE
-}
-
-function modelFromState() {
-    return currentState === ModelState.CHARMANDER ? charmanderPaperModel : squirtlePaperModel
-}
-
-// Function to handle mouse click events
-function onMouseClick(event) {
-    // Check if the event is a touch event
-    if (event.type === 'touchend') {
-        // Use the first touch point from changedTouches
-        mouse.x = (event.changedTouches[0].clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(event.changedTouches[0].clientY / window.innerHeight) * 2 + 1;
-    } else {
-        // Use the mouse coordinates
-        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-    }
-
-    // Update the raycaster with the camera and mouse position
-    raycaster.setFromCamera(mouse, camera);
-
-    // Calculate objects intersecting the raycaster
-    const intersects = raycaster.intersectObjects(scene.children);
-
-    // If there's an intersection, call update State
-    if (intersects.length > 0) {
-        if (!didVote) {
-            if (intersects[0].object == charmanderPaperModel) {
-                selectPoster(charmanderPaperModel)
-            }
-            else if (intersects[0].object == squirtlePaperModel) {
-                selectPoster(squirtlePaperModel)
-            }
-            else if (intersects[0].object?.parent == voteBox && currentState == ModelState.NONE) {
-                showHelpers()
-            }
-            else if (intersects[0].object?.parent == voteBox && currentState != ModelState.NONE) {
-                castVote()
-            }  
-        }
-    }
-}
-
-
-//#region GSAP
-
-function animatePosterOut(mesh){
-    lastPosterCoordinates = new THREE.Vector3(mesh === charmanderPaperModel ? -posterOffset : posterOffset, 0, 0.025)
-    gsap.to(mesh.position, { delay: 0.2, duration: debugObject.easeDuration, x: 0, y: debugObject.posterSelectionHeight, z: debugObject.posterSelectionZ, ease: debugObject.resetEase})
-}
-
-function animatePosterIn(mesh) {
-    gsap.to(mesh.position, { duration: debugObject.easeDuration+0.2, x: lastPosterCoordinates.x, y: lastPosterCoordinates.y, z: lastPosterCoordinates.z, ease: debugObject.resetEase})
-    lastPosterCoordinates = undefined
-}
-
-function animateThumbtackOut(mesh) {
-    lastThumbtackCoordinates = new THREE.Vector3(mesh === thumbtackRed ? -posterOffset : posterOffset + 0.05, 1.15*paperScale*0.5 - 0.09, 0.1)
-    gsap.to(mesh.rotation, { duration: 0.2, x:  Math.PI / 4})
-    gsap.to(mesh.rotation, { delay: 0.1, duration: 0.2, x:  Math.PI / 2})
-    gsap.to(mesh.position, { duration: 0.3, y: mesh.position.y + 0.5, z: mesh.position.z + 0.3, ease: 'power1.out'})
-    gsap.to(mesh.position, { delay: 0.15, duration: 0.2, z: lastThumbtackCoordinates.z, ease: 'power1.out'})
-
-}
-
-function animateThumbtackIn(mesh) {
-    gsap.to(mesh.position, { duration: 0.2, z: mesh.position.z + 0.3, ease: 'power1.in'})
-    gsap.to(mesh.rotation, { duration: 0.2, x:  Math.PI / 4})
-    gsap.to(mesh.position, { delay: 0.2, duration: 0.3, x: lastThumbtackCoordinates.x, y: lastThumbtackCoordinates.y, z: lastThumbtackCoordinates.z, ease: 'power1.out'})
-    gsap.to(mesh.rotation, { delay: 0.2, duration: 0.3, x:  Math.PI / 2, y: Math.random() * -0.6, z: Math.random()*-0.3})
-    lastThumbtackCoordinates = undefined
-}
-
-function animateBallotIn(mesh) {
-    gsap.to(mesh.position, { duration: 0.5, z: 1, ease: 'power1.out'})
-    gsap.to(mesh.position, { delay: 0.3, duration: 0.5, y: - 6, ease: 'power1.out'})
-    gsap.to(mesh.material, { delay: 0.4, duration: 0.1, opacity: 0, ease: 'power1.out'})
-
-};
-
-function animateBallotOut(mesh) {
-    gsap.to(mesh.material, { duration: 0.2, opacity: 1, ease: 'power1.in'})
-    gsap.to(mesh.position, { duration: 0.3, y: debugObject.posterSelectionHeight, ease: 'power1.out'})
-    gsap.to(mesh.position, { delay: 0.3,  duration: 0.5, z: debugObject.posterSelectionZ, ease: 'power1.out'})
-}
-
-function animatePinIn(mesh, animateY) {
-    if (animateY) {
-        gsap.to(mesh.position, { duration: 1.5, y: 0, ease: 'power4.out'})
-    }
-    else {
-        mesh.position.y = 0
-    }
-    // Create a GSAP timeline
-    let tl = gsap.timeline({ repeat: -1,});
-
-    tl.to(mesh.rotation, { duration: 4, y: Math.PI / 12, ease: 'power2.inOut' })
-    .to(mesh.rotation, { duration: 4, y: -Math.PI / 12, ease: 'power2.inOut' })
-    .to(mesh.rotation, { duration: 2, y: 0, ease: 'power2.inOut' })
-    .to(mesh.rotation, { duration: 2, y: 0, ease: 'power2.inOut' })
-}
-
-function shakeLetter(mesh, delay = 0) {
-    // Create a GSAP timeline
-    let tl = gsap.timeline({yoyo: true});
-
-
-    // Add scaling animation
-    tl.to(mesh.scale, {
-        x: 1.1,
-        y: 1.1,
-        z: 1.1,
-        duration: 0.2,
-        delay,
-        ease: "power1.inOut"
-    });
-
-    // Add wiggle rotation animation
-    tl.to(mesh.rotation, {
-        z: "+=0.1",
-        duration: 0.1,
-        ease: "power1.inOut",
-        yoyo: true,
-        repeat: 3
-    });
-
-    // Return to original scale and rotation
-    tl.to(mesh.scale, {
-        x: 1,
-        y: 1,
-        z: 1,
-        duration: 0.2,
-        ease: "power1.inOut"
-    });
-    return tl;
-}
-
-
-
-function resetControls() {
-    gsap.to(controls.object.rotation, {
-        duration: debugObject.easeDuration,
-        x: 0,
-        y: 0,
-        z: 0,
-        ease: debugObject.resetEase,
-    });
-    gsap.to(controls.object.position, {
-        duration: debugObject.easeDuration,
-        x: controls.position0.x,
-        y: controls.position0.y,
-        z: controls.position0.z,
-        ease: debugObject.resetEase,
-    });
-
-}
-
-//#region Debug
-const debugObject = {}
-debugObject.resetEase = "elastic.out(1,2)"
-debugObject.easeDuration = 0.3
-debugObject.spawnDistance = 16
-debugObject.posterSelectionHeight = 0.75
-debugObject.posterSelectionZ = 4
-debugObject.buttonSize = 0.3
-gui.add(debugObject, 'posterSelectionHeight')
-gui.add(debugObject, 'posterSelectionZ')
-gui.add(debugObject, 'resetEase')
-gui.add(debugObject, 'easeDuration')
-
-//#region Cookies
-function getCookieByName(name) {
-    const cookies = document.cookie.split(';');
-    for (let cookie of cookies) {
-        cookie = cookie.trim();
-        if (cookie.startsWith(name + '=')) {
-            return cookie.substring(name.length + 1);
-        }
-    }
-    return null;
-}
-
-function onTouchStart(event) {
-    startTime = Date.now()
-    touchStartX = event.touches[0].clientX;
-    touchStartY = event.touches[0].clientY;
-}
-
-function onTouchEnd(event) {
-    const touchEndX = event.changedTouches[0].clientX;
-    const touchEndY = event.changedTouches[0].clientY;
-
-    const deltaX = touchEndX - touchStartX;
-    const deltaY = touchEndY - touchStartY;
-    const time = Date.now()-startTime
-    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-
-    if (time < 300 || distance < 2 || (currentState != ModelState.NONE && distance > 50)) {
-        onMouseClick(event);
-    }
-}
-
-function onMouseDown(event) {
-    startTime = Date.now()
-    touchStartX = event.clientX;
-    touchStartY = event.clientY;
-}
-
-function onMouseUp(event) {
-    const mouseEndX = event.clientX;
-    const mouseEndY = event.clientY;
-
-    const deltaX = mouseEndX - touchStartX;
-    const deltaY = mouseEndY - touchStartY;
-    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-    const time = Date.now()-startTime
-
-    if (time < 300 || distance < 2 || currentState != ModelState.NONE) {
-        onMouseClick(event);
-    }
-}
-
-
-//#region Startup
-controls.addEventListener('end', () => resetControls())
-if (/Mobi|Android/i.test(navigator.userAgent)) {
-    window.addEventListener('touchstart', onTouchStart, false);
-    window.addEventListener('touchend', onTouchEnd, false);
-} else {
-    window.addEventListener('mousedown', onMouseDown, false);
-    window.addEventListener('mouseup', onMouseUp, false);
-}
-if (getCookieByName('vote')) {
-    showVotedState(getCookieByName('vote'), false)
-} else {
-    generateVotingBooth()
-}
 tick()

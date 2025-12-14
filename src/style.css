@@ -8,120 +8,100 @@
     font-style: normal;
 }
 
-*
-{
+* {
     margin: 0;
     padding: 0;
+    box-sizing: border-box;
 }
 
 html,
-body
-{
+body {
     overflow: hidden;
-    font-family: 'gothambold';
+    font-family: 'gothambold', sans-serif;
+    background: radial-gradient(circle at 20% 20%, #1b2035 0%, #0e101a 60%);
+    color: #f0f4ff;
 }
 
-.webgl
-{
+.webgl {
     position: fixed;
     top: 0;
     left: 0;
+    width: 100vw;
+    height: 100vh;
     outline: none;
 }
 
-.hud-container-top
-{
-    opacity: 0;
+.hint {
     position: fixed;
-    top: 0;
-    left: 0;
+    bottom: 24px;
     width: 100%;
-    font-size: 32px;
-    padding: 32px 0;
-    user-select: none;
     text-align: center;
+    letter-spacing: 0.08em;
+    font-size: 18px;
+    color: #cfd8ff;
+    text-transform: uppercase;
     pointer-events: none;
-
-    .thanks 
-    {
-        font-size: 48px;
-    }
-
-    .results {
-        padding-top: 8px;
-    }
-
-    .reminders {
-        display: flex;
-        align-content: center;
-        justify-content: center;
-        align-items: center;
-        gap: 12px;
-        padding-top: 8px;
-        font-size: 16px;
-    }
+    user-select: none;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
 }
 
-.hud-container-bottom
-{
-    opacity: 0;
+.gallery-toggle {
     position: fixed;
-    bottom: 128px;
-    left: 0;
-    width: 100%;
-    font-size: 32px;
-    padding: 32px 0;
+    top: 16px;
+    right: 16px;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 10px;
+    cursor: pointer;
+    color: #f0f4ff;
+    letter-spacing: 0.04em;
+    backdrop-filter: blur(6px);
+    transition: transform 0.15s ease, background 0.2s ease;
     user-select: none;
-    text-align: center;
+}
+
+.gallery-toggle:hover {
+    background: rgba(255, 255, 255, 0.14);
+    transform: translateY(-1px);
+}
+
+.gallery-overlay {
+    position: fixed;
+    inset: 0;
     pointer-events: none;
 }
 
-.animate-down {
-    animation: moveDown 2s ease-in-out forwards;
+.gallery-controls {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 18px;
+    transform: translateY(-50%);
+    pointer-events: none;
 }
 
-@keyframes moveDown {
-    from {
-        top: -100px; /* Start position */
-        opacity: 0;
-    }
-    to {
-        top: 0; /* End position */
-        opacity: 1;
-        pointer-events: all;
-    }
+.gallery-btn {
+    pointer-events: all;
+    width: 44px;
+    height: 44px;
+    border-radius: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(0, 0, 0, 0.35);
+    color: #f0f4ff;
+    font-size: 18px;
+    cursor: pointer;
+    transition: transform 0.15s ease, background 0.2s ease;
 }
 
-.animate-up {
-    animation: moveUp 2s ease-in-out forwards;
-    animation-delay: 1s;
+.gallery-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: scale(1.05);
 }
 
-@keyframes moveUp {
-    from {
-        bottom: -128px; /* Start position */
-        opacity: 0;
-
-    }
-    to {
-        bottom: 0; /* End position */
-        opacity: 1;
-        pointer-events: all;
-    }
-}
-
-.red{
-    color: red;
-}
-
-.blue {
-    color: blue;
-}
-
-a:link {
-    color: #286128;
-}
-
-a:visited {
-    color: #286128; /* This ensures the visited link retains the default color */
+.hidden {
+    display: none;
 }
