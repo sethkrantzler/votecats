@@ -5,6 +5,9 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
 const canvas = document.querySelector('canvas.webgl')
 const hint = document.querySelector('.hint')
+const collectionBtn = document.querySelector('.collection-btn')
+const collectionPanel = document.querySelector('.collection-panel')
+const collectionHeader = document.querySelector('.collection-header')
 
 // Scene
 const scene = new THREE.Scene()
@@ -94,7 +97,7 @@ const loadGLB = (path) => new Promise((resolve, reject) => {
 })
 
 // Card helpers
-const spinTarget = 10
+const spinTarget = 5
 const cards = [
     {
         name: 'squirtle',
@@ -107,8 +110,114 @@ const cards = [
         metal: './textures/cards/charmander/metal.jpg',
     },
 ]
+const cardsCollectedCookie = 'cardsCollected'
+const readCollected = () => {
+    const raw = document.cookie.split('; ').find((row) => row.startsWith(`${cardsCollectedCookie}=`))?.split('=')[1]
+    if (!raw) return new Set()
+    try {
+        const parsed = JSON.parse(decodeURIComponent(raw))
+        if (Array.isArray(parsed)) return new Set(parsed.filter((v) => typeof v === 'string'))
+    } catch (err) {
+        console.warn('Could not parse cardsCollected cookie', err)
+    }
+    return new Set()
+}
+const writeCollected = (set) => {
+    const value = encodeURIComponent(JSON.stringify(Array.from(set)))
+    document.cookie = `${cardsCollectedCookie}=${value}; path=/; max-age=31536000`
+}
+const recordCardSeen = (cardName) => {
+    if (!cardName) return
+    const current = readCollected()
+    if (current.has(cardName)) return
+    current.add(cardName)
+    writeCollected(current)
+}
+const destroyCard = () => {
+    if (!cardMesh) return
+    cardBobTween?.kill()
+    scene.remove(cardMesh)
+    disposeObject(cardMesh)
+    cardMesh = null
+}
+let sharedAlphaTexture
+let collectionGroup
+let collectionCards = []
+let collectionVisible = false
+let featuredCard = null
+let collectionIndex = 0
+const spacing = 2.2
+const clearFeatured = () => {
+    if (!featuredCard) return
+    const { mesh, home } = featuredCard
+    gsap.to(mesh.position, { duration: 0.35, x: home.position.x, y: home.position.y, z: home.position.z, ease: 'power2.out' })
+    gsap.to(mesh.rotation, { duration: 0.35, x: home.rotation.x, y: home.rotation.y, z: home.rotation.z, ease: 'power2.out' })
+    featuredCard = null
+}
+const scrollToIndex = (idx) => {
+    if (!collectionGroup || collectionCards.length === 0) return
+    const centerOffset = (collectionCards.length - 1) / 2
+    collectionIndex = Math.min(Math.max(idx, 0), Math.max(collectionCards.length - 1, 0))
+    const targetX = -((collectionIndex - centerOffset) * spacing)
+    gsap.to(collectionGroup.position, { duration: 0.4, x: targetX, ease: 'power2.out' })
+}
+const ensureCollectionGroup = () => {
+    if (!collectionGroup) {
+        collectionGroup = new THREE.Group()
+        scene.add(collectionGroup)
+    }
+}
+const clearCollectionGroup = () => {
+    if (!collectionGroup) return
+    collectionGroup.children.forEach((child) => disposeObject(child))
+    collectionGroup.clear()
+    collectionCards = []
+    featuredCard = null
+}
+const createCardMeshByName = async (name) => {
+    const color = `./textures/cards/${name}/color.jpg`
+    const metal = `./textures/cards/${name}/metal.jpg`
+    const [colorTex, metalTex] = await Promise.all([
+        loadTexture(color),
+        loadTexture(metal, { colorSpace: undefined }),
+    ])
+    return buildCard(colorTex, sharedAlphaTexture, metalTex)
+}
+const layoutCollection = () => {
+    if (!collectionGroup) return
+    const total = collectionCards.length
+    collectionCards.forEach((entry, idx) => {
+        if (featuredCard && featuredCard.mesh === entry.mesh) return
+        const x = (idx - (total - 1) / 2) * spacing
+        entry.mesh.position.set(x, 0, -0.5)
+        entry.mesh.rotation.set(0, 0, 0)
+        entry.home.position.copy(entry.mesh.position)
+        entry.home.rotation.copy(entry.mesh.rotation)
+    })
+}
+const showCollectionPanel = async () => {
+    const collected = Array.from(readCollected())
+    if (!collectionHeader) return
+    collectionHeader.textContent = `Cards Collected: ${collected.length}`
+    collectionPanel?.classList.remove('hidden')
+    collectionVisible = true
+    ensureCollectionGroup()
+    clearCollectionGroup()
+    const meshes = await Promise.all(collected.map((name) => createCardMeshByName(name)))
+    collectionCards = meshes.map((mesh, idx) => ({
+        name: collected[idx],
+        mesh,
+        home: { position: new THREE.Vector3(), rotation: new THREE.Euler() },
+    }))
+    meshes.forEach((mesh) => collectionGroup.add(mesh))
+    collectionIndex = 0
+    layoutCollection()
+    scrollToIndex(0)
+}
 let packMesh
 let cardMesh
+const raycaster = new THREE.Raycaster()
+const pointer = new THREE.Vector2()
 let opening = false
 let opened = false
 let completedSpins = 0
@@ -176,12 +285,18 @@ const disposeObject = (object) => {
                     mat.metalnessMap?.dispose()
                     mat.roughnessMap?.dispose()
                     mat.normalMap?.dispose()
+                    if (mat.alphaMap && mat.alphaMap !== sharedAlphaTexture) {
+                        mat.alphaMap.dispose()
+                    }
                 })
             } else if (child.material) {
                 child.material.map?.dispose()
                 child.material.metalnessMap?.dispose()
                 child.material.roughnessMap?.dispose()
                 child.material.normalMap?.dispose()
+                if (child.material.alphaMap && child.material.alphaMap !== sharedAlphaTexture) {
+                    child.material.alphaMap.dispose()
+                }
             }
         }
     })
@@ -189,9 +304,11 @@ const disposeObject = (object) => {
 
 const showCard = () => {
     if (!cardMesh) return
+    recordCardSeen(todayCard?.name)
     cardMesh.visible = true
     cardMesh.position.set(0, 5, 1)
     cardMesh.rotation.set(-0.25, Math.PI, 0)
+    collectionBtn?.classList.remove('hidden')
 
     gsap.to(cardMesh.position, { duration: 1, y: 0, ease: 'bounce.out'})
     gsap.to(cardMesh.rotation, {
@@ -288,6 +405,7 @@ Promise.all([
     packMesh.scale.setScalar(1.2)
     scene.add(packMesh)
 
+    sharedAlphaTexture = alphaTexture
     cardMesh = buildCard(cardTexture, alphaTexture, cardMetalTexture)
     cardMesh.visible = false
     scene.add(cardMesh)
@@ -304,6 +422,51 @@ Promise.all([
 // Interaction
 window.addEventListener('click', onPackClick)
 window.addEventListener('touchend', onPackClick)
+collectionBtn?.addEventListener('click', () => {
+    destroyCard()
+    showCollectionPanel()
+    gsap.to(collectionBtn, {
+        duration: 0.25,
+        opacity: 0,
+        scale: 0.94,
+        ease: 'power1.out',
+        onComplete: () => collectionBtn?.classList.add('hidden'),
+    })
+})
+const onCanvasClick = (event) => {
+    if (!collectionVisible || !collectionGroup) return
+    const rect = renderer.domElement.getBoundingClientRect()
+    pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+    pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+    raycaster.setFromCamera(pointer, camera)
+    const intersects = raycaster.intersectObjects(collectionGroup.children)
+    if (intersects.length > 0) {
+        const mesh = intersects[0].object
+        const entry = collectionCards.find((c) => c.mesh === mesh)
+        if (!entry) return
+        if (featuredCard && featuredCard.mesh === mesh) {
+            gsap.to(mesh.position, { duration: 0.4, x: entry.home.position.x, y: entry.home.position.y, z: entry.home.position.z, ease: 'power2.out' })
+            gsap.to(mesh.rotation, { duration: 0.4, x: entry.home.rotation.x, y: entry.home.rotation.y, z: entry.home.rotation.z, ease: 'power2.out' })
+            featuredCard = null
+            return
+        }
+        if (featuredCard && featuredCard.mesh !== mesh) {
+            clearFeatured()
+        }
+        entry.home.position.copy(mesh.position)
+        entry.home.rotation.copy(mesh.rotation)
+        featuredCard = entry
+        const targetX = -collectionGroup.position.x
+        gsap.to(mesh.position, { duration: 0.45, x: targetX, y: 0.05, z: 0.9, ease: 'power2.out' })
+        gsap.to(mesh.rotation, { duration: 0.45, x: 0, y: 0, z: 0, ease: 'power2.out' })
+        return
+    }
+    const dir = (event.clientX - (window.innerWidth / 2)) > 0 ? 1 : -1
+    const maxIndex = Math.max(0, collectionCards.length - 1)
+    collectionIndex = Math.min(maxIndex, Math.max(0, collectionIndex + dir))
+    scrollToIndex(collectionIndex)
+}
+renderer.domElement.addEventListener('pointerdown', onCanvasClick)
 
 // Animation loop
 const clock = new THREE.Clock()
@@ -328,6 +491,8 @@ const tick = () => {
             launchPack()
         }
     }
+
+    // Idle spin removed for collection cards per request
 
     controls.update()
     renderer.render(scene, camera)

@@ -44,10 +44,9 @@ body {
     user-select: none;
     text-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
 }
-
-.gallery-toggle {
+.collection-btn {
     position: fixed;
-    top: 16px;
+    bottom: 16px;
     right: 16px;
     padding: 10px 14px;
     background: rgba(255, 255, 255, 0.08);
@@ -56,50 +55,42 @@ body {
     cursor: pointer;
     color: #f0f4ff;
     letter-spacing: 0.04em;
-    backdrop-filter: blur(6px);
+    backdrop-filter: blur(8px);
     transition: transform 0.15s ease, background 0.2s ease;
     user-select: none;
+    z-index: 10;
 }
 
-.gallery-toggle:hover {
+.collection-btn:hover {
     background: rgba(255, 255, 255, 0.14);
     transform: translateY(-1px);
 }
 
-.gallery-overlay {
+.collection-panel {
     position: fixed;
     inset: 0;
-    pointer-events: none;
-}
-
-.gallery-controls {
-    position: absolute;
-    top: 50%;
-    left: 0;
-    width: 100%;
     display: flex;
-    justify-content: space-between;
-    padding: 0 18px;
-    transform: translateY(-50%);
+    flex-direction: column;
+    pointer-events: none;
+    z-index: 9;
+}
+
+.collection-header {
+    font-size: 18px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-align: center;
+    margin: 14px auto 0;
+    padding: 10px 14px;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 12px;
+    backdrop-filter: blur(6px);
     pointer-events: none;
 }
 
-.gallery-btn {
-    pointer-events: all;
-    width: 44px;
-    height: 44px;
-    border-radius: 22px;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    background: rgba(0, 0, 0, 0.35);
-    color: #f0f4ff;
-    font-size: 18px;
-    cursor: pointer;
-    transition: transform 0.15s ease, background 0.2s ease;
-}
-
-.gallery-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
-    transform: scale(1.05);
+.collection-row {
+    display: none;
 }
 
 .hidden {
