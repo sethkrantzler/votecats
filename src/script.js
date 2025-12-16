@@ -57,6 +57,8 @@ keyTarget.position.set(0, 0.9, 0)
 scene.add(keyTarget)
 keyLight.target = keyTarget
 scene.add(keyLight)
+const keyLightBase = keyLight.position.clone()
+const keySwingAmp = new THREE.Vector3(0.5, 0.2, 0.3)
 
 const rimLight = new THREE.DirectionalLight(0x92c5ff, 1.1)
 rimLight.position.set(-2.4, 1.6, 3.2)
@@ -65,6 +67,8 @@ rimTarget.position.set(0, 0.9, 0)
 scene.add(rimTarget)
 rimLight.target = rimTarget
 scene.add(rimLight)
+const rimLightBase = rimLight.position.clone()
+const rimSwingAmp = new THREE.Vector3(0.35, 0.25, 0.25)
 
 // Resize handling
 window.addEventListener('resize', () => {
@@ -243,6 +247,7 @@ const showCollectionPanel = async () => {
     collectionHeader.textContent = `Cards Collected: ${collected.length}`
     collectionPanel?.classList.remove('hidden')
     collectionVisible = true
+    controls.enableRotate = false
     ensureCollectionGroup()
     clearCollectionGroup()
     const meshes = await Promise.all(collected.map((name) => createCardMeshByName(name)))
@@ -514,6 +519,7 @@ renderer.domElement.addEventListener('pointerdown', onCanvasClick)
 const clock = new THREE.Clock()
 const tick = () => {
     const delta = clock.getDelta()
+    const elapsed = clock.getElapsedTime()
 
     if (opening && packMesh && !opened) {
         spinSpeed = Math.max(spinFloor, spinSpeed - spinDecayPerSecond * delta)
@@ -535,6 +541,18 @@ const tick = () => {
     }
 
     // Idle spin removed for collection cards per request
+
+    // Animate spotlights to sweep across cards for metallic highlights
+    keyLight.position.set(
+        keyLightBase.x + Math.sin(elapsed * 0.6) * keySwingAmp.x,
+        keyLightBase.y + Math.cos(elapsed * 0.8) * keySwingAmp.y,
+        keyLightBase.z + Math.sin(elapsed * 0.5) * keySwingAmp.z,
+    )
+    rimLight.position.set(
+        rimLightBase.x + Math.cos(elapsed * 0.55) * rimSwingAmp.x,
+        rimLightBase.y + Math.sin(elapsed * 0.7) * rimSwingAmp.y,
+        rimLightBase.z + Math.cos(elapsed * 0.6) * rimSwingAmp.z,
+    )
 
     controls.update()
     renderer.render(scene, camera)
