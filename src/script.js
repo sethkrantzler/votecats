@@ -109,6 +109,46 @@ const cards = [
         color: './textures/cards/charmander/color.jpg',
         metal: './textures/cards/charmander/metal.jpg',
     },
+    {
+        name: 'bulbasaur',
+        color: './textures/cards/Bulbasaur/color.jpg',
+        metal: './textures/cards/Bulbasaur/metal.jpg',
+    },
+    {
+        name: 'butters',
+        color: './textures/cards/Butters/color.jpg',
+        metal: './textures/cards/Butters/metal.jpg',
+    },
+    {
+        name: 'daphne',
+        color: './textures/cards/Daphne/color.jpg',
+        metal: './textures/cards/Daphne/metal.jpg',
+    },
+    {
+        name: 'noodle',
+        color: './textures/cards/Noodle/color.jpg',
+        metal: './textures/cards/Noodle/metal.jpg',
+    },
+    {
+        name: 'pearl',
+        color: './textures/cards/Pearl/color.jpg',
+        metal: './textures/cards/Pearl/metal.jpg',
+    },
+    {
+        name: 'sadie',
+        color: './textures/cards/Sadie/color.jpg',
+        metal: './textures/cards/Sadie/metal.jpg',
+    },
+    {
+        name: 'snurf',
+        color: './textures/cards/Snurf/color.jpg',
+        metal: './textures/cards/Snurf/metal.jpg',
+    },
+    {
+        name: 'winston',
+        color: './textures/cards/Winston/color.jpg',
+        metal: './textures/cards/Winston/metal.jpg',
+    },
 ]
 const cardsCollectedCookie = 'cardsCollected'
 const readCollected = () => {
@@ -126,6 +166,7 @@ const writeCollected = (set) => {
     const value = encodeURIComponent(JSON.stringify(Array.from(set)))
     document.cookie = `${cardsCollectedCookie}=${value}; path=/; max-age=31536000`
 }
+const getCardByName = (name) => cards.find((c) => c.name === name)
 const recordCardSeen = (cardName) => {
     if (!cardName) return
     const current = readCollected()
@@ -133,6 +174,7 @@ const recordCardSeen = (cardName) => {
     current.add(cardName)
     writeCollected(current)
 }
+
 const destroyCard = () => {
     if (!cardMesh) return
     cardBobTween?.kill()
@@ -175,11 +217,11 @@ const clearCollectionGroup = () => {
     featuredCard = null
 }
 const createCardMeshByName = async (name) => {
-    const color = `./textures/cards/${name}/color.jpg`
-    const metal = `./textures/cards/${name}/metal.jpg`
+    const card = getCardByName(name)
+    if (!card) throw new Error(`Card not found for name: ${name}`)
     const [colorTex, metalTex] = await Promise.all([
-        loadTexture(color),
-        loadTexture(metal, { colorSpace: undefined }),
+        loadTexture(card.color),
+        loadTexture(card.metal, { colorSpace: undefined }),
     ])
     return buildCard(colorTex, sharedAlphaTexture, metalTex)
 }
