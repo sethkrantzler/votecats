@@ -153,6 +153,51 @@ const cards = [
         color: './textures/cards/Winston/color.jpg',
         metal: './textures/cards/Winston/metal.jpg',
     },
+    {
+        name: 'auggie',
+        color: './textures/cards/Auggie/color.jpg',
+        metal: './textures/cards/Auggie/metal.jpg',
+    },
+    {
+        name: 'flash',
+        color: './textures/cards/Flash/color.jpg',
+        metal: './textures/cards/Flash/metal.jpg',
+    },
+    {
+        name: 'liam',
+        color: './textures/cards/Liam/color.jpg',
+        metal: './textures/cards/Liam/metal.jpg',
+    },
+    {
+        name: 'loki',
+        color: './textures/cards/Loki/color.jpg',
+        metal: './textures/cards/Loki/metal.jpg',
+    },
+    {
+        name: 'nero',
+        color: './textures/cards/Nero/color.jpg',
+        metal: './textures/cards/Nero/metal.jpg',
+    },
+    {
+        name: 'noel',
+        color: './textures/cards/Noel/color.jpg',
+        metal: './textures/cards/Noel/metal.jpg',
+    },
+    {
+        name: 'nola',
+        color: './textures/cards/Nola/color.jpg',
+        metal: './textures/cards/Nola/metal.jpg',
+    },
+    {
+        name: 'oliver',
+        color: './textures/cards/Oliver/color.jpg',
+        metal: './textures/cards/Oliver/metal.jpg',
+    },
+    {
+        name: 'rosie',
+        color: './textures/cards/Rosie/color.jpg',
+        metal: './textures/cards/Rosie/metal.jpg',
+    },
 ]
 const cardsCollectedCookie = 'cardsCollected'
 const readCollected = () => {
@@ -433,7 +478,11 @@ const onPackClick = () => {
 // Asset load + setup
 const pickCardForToday = () => {
     const today = new Date()
-    const idx = today.getDate() % cards.length
+    const start = new Date(today.getFullYear(), 0, 0)
+    const diff = today - start
+    const oneDay = 1000 * 60 * 60 * 24
+    const dayOfYear = Math.floor(diff / oneDay)
+    const idx = dayOfYear % cards.length
     return cards[idx]
 }
 
